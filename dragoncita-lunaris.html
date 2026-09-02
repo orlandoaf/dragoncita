@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Dragoncita Lunaris · Rompecabezas con alma</title>
+<style>
+/* ============================================================
+   DRAGONCITA LUNARIS — hoja de estilos
+   ============================================================ */
+:root{
+  --night-1: #0e0620;
+  --night-2: #1c0e3a;
+  --night-3: #2c1454;
+  --violet: #6e3fd6;
+  --pink: #ff6fb0;
+  --pink-soft: #ffb3d6;
+  --gold: #ffd166;
+  --mint: #6fe3c9;
+  --ink: #f6f1ff;
+  --ink-dim: #c3b6e6;
+  --glass: rgba(255,255,255,0.07);
+  --glass-strong: rgba(255,255,255,0.14);
+  --radius-lg: 28px;
+  --radius-md: 18px;
+  --radius-sm: 12px;
+  --font-ui: "Quicksand", -apple-system, sans-serif;
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-phrase: "Dancing Script", cursive;
+}
+
+@font-face{ font-family: "Quicksand"; src: local("Quicksand"); }
+
+*{ box-sizing: border-box; }
+html,body{
+  margin:0; padding:0; height:100%;
+  background: radial-gradient(ellipse at 20% -10%, var(--night-3), var(--night-1) 60%);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  overflow-x:hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+#app{ min-height:100vh; display:flex; flex-direction:column; position:relative; }
+
+/* ---------- fondo estrellado global sutil ---------- */
+#stars-bg{
+  position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.55;
+}
+.star{
+  position:absolute; background:#fff; border-radius:50%;
+  animation: twinkle 3.2s ease-in-out infinite;
+}
+@keyframes twinkle{
+  0%,100%{ opacity:.15; transform:scale(.8);}
+  50%{ opacity:1; transform:scale(1.15);}
+}
+
+/* ---------- barra superior ---------- */
+#topbar{
+  position:sticky; top:0; z-index:40;
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 14px 18px;
+  background: linear-gradient(to bottom, rgba(14,6,32,.92), rgba(14,6,32,.55));
+  backdrop-filter: blur(10px);
+}
+.brand{
+  display:flex; align-items:center; gap:10px;
+  font-family: var(--font-display); font-size:1.25rem; letter-spacing:.3px;
+  cursor:pointer; user-select:none;
+}
+.brand .dragon{ font-size:1.5rem; filter: drop-shadow(0 0 6px rgba(255,111,176,.6)); }
+#book-btn{
+  width:42px; height:42px; border-radius:50%;
+  background: var(--glass); border:1px solid var(--glass-strong);
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.2rem; cursor:pointer; position:relative;
+  transition: transform .2s ease, background .2s ease;
+}
+#book-btn:hover{ background: var(--glass-strong); transform: translateY(-1px); }
+#book-count{
+  position:absolute; top:-4px; right:-4px;
+  background: var(--pink); color:#1c0e3a; font-weight:700;
+  font-size:.65rem; padding:2px 5px; border-radius:999px;
+  min-width:16px; text-align:center; display:none;
+}
+
+/* ---------- vistas ---------- */
+main{ flex:1; position:relative; z-index:1; padding-bottom:90px; }
+.view{ display:none; padding: 22px 18px 10px; max-width:920px; margin:0 auto; animation: fadeIn .35s ease; }
+.view.active{ display:block; }
+@keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
+
+h1.page-title{ font-family: var(--font-display); font-size:1.7rem; margin:0 0 6px; }
+p.page-sub{ color: var(--ink-dim); margin:0 0 22px; line-height:1.5; }
+
+/* ---------- Home ---------- */
+.hero-card{
+  border-radius: var(--radius-lg);
+  padding: 34px 26px;
+  background: linear-gradient(135deg, rgba(110,63,214,.35), rgba(255,111,176,.18));
+  border:1px solid var(--glass-strong);
+  position:relative; overflow:hidden; margin-bottom:26px;
+}
+.hero-card::after{
+  content:""; position:absolute; width:220px; height:220px; border-radius:50%;
+  background: radial-gradient(circle, rgba(255,209,102,.35), transparent 70%);
+  top:-60px; right:-60px;
+}
+.hero-card h1{ font-family: var(--font-display); font-size:2rem; margin:0 0 10px; position:relative; }
+.hero-card p{ color: var(--ink-dim); max-width: 42ch; margin:0 0 20px; position:relative; }
+.btn{
+  display:inline-flex; align-items:center; gap:8px;
+  padding: 13px 22px; border-radius: 999px; border:none;
+  font-family: var(--font-ui); font-weight:700; font-size:.95rem;
+  cursor:pointer; transition: transform .15s ease, box-shadow .15s ease;
+}
+.btn-primary{ background: linear-gradient(135deg, var(--pink), var(--violet)); color:#fff; box-shadow: 0 8px 22px rgba(255,111,176,.28);}
+.btn-primary:hover{ transform: translateY(-2px); box-shadow: 0 12px 26px rgba(255,111,176,.4); }
+.btn-ghost{ background: var(--glass); color: var(--ink); border:1px solid var(--glass-strong); }
+.btn-ghost:hover{ background: var(--glass-strong); }
+
+.home-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap:14px; }
+.home-tile{
+  border-radius: var(--radius-md); padding:20px 16px; cursor:pointer;
+  background: var(--glass); border:1px solid var(--glass-strong);
+  transition: transform .18s ease, background .18s ease;
+}
+.home-tile:hover{ transform: translateY(-3px); background: var(--glass-strong); }
+.home-tile .icon{ font-size:1.6rem; margin-bottom:8px; display:block; }
+.home-tile strong{ display:block; margin-bottom:3px; }
+.home-tile span{ color: var(--ink-dim); font-size:.82rem; }
+
+/* ---------- Catálogo ---------- */
+.upload-box{
+  border: 1.5px dashed var(--glass-strong); border-radius: var(--radius-md);
+  padding: 26px; text-align:center; margin-bottom:26px; cursor:pointer;
+  transition: border-color .2s ease, background .2s ease;
+}
+.upload-box:hover{ border-color: var(--pink-soft); background: var(--glass); }
+.upload-box input{ display:none; }
+.cat-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); gap:14px; }
+.cat-tile{
+  border-radius: var(--radius-md); overflow:hidden; cursor:pointer; position:relative;
+  aspect-ratio: 1/1; border:1px solid var(--glass-strong);
+  transition: transform .18s ease;
+}
+.cat-tile:hover{ transform: translateY(-3px) scale(1.02); }
+.cat-tile canvas{ width:100%; height:100%; display:block; }
+.cat-tile .label{
+  position:absolute; left:0; right:0; bottom:0; padding:8px 10px;
+  background: linear-gradient(to top, rgba(0,0,0,.65), transparent);
+  font-size:.8rem; font-weight:700;
+}
+.img-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap:12px; }
+.img-tile{ border-radius: var(--radius-sm); overflow:hidden; cursor:pointer; aspect-ratio:1/1; border:1px solid var(--glass-strong); }
+.img-tile canvas{ width:100%; height:100%; display:block; }
+.back-link{ color: var(--ink-dim); cursor:pointer; display:inline-flex; align-items:center; gap:6px; margin-bottom:16px; font-size:.9rem; }
+.back-link:hover{ color: var(--ink); }
+
+/* ---------- Piezas ---------- */
+.pieces-options{ display:grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:20px;}
+.piece-opt{
+  border-radius: var(--radius-md); padding:18px; text-align:center; cursor:pointer;
+  background: var(--glass); border:2px solid transparent;
+  transition: border-color .18s ease, transform .18s ease;
+}
+.piece-opt:hover{ transform: translateY(-2px); }
+.piece-opt.selected{ border-color: var(--pink); background: rgba(255,111,176,.14); }
+.piece-opt .grid-preview{
+  display:grid; gap:2px; width:64px; height:64px; margin:0 auto 10px;
+}
+.piece-opt .grid-preview div{ background: var(--glass-strong); border-radius:2px; }
+.piece-opt strong{ display:block; font-size:1.05rem; }
+.piece-opt span{ color: var(--ink-dim); font-size:.78rem; }
+.selected-preview{ text-align:center; margin-bottom:20px; }
+.selected-preview img{ max-width:220px; border-radius: var(--radius-md); border:1px solid var(--glass-strong); }
+
+/* ---------- Tablero ---------- */
+#board-wrap{ display:flex; flex-direction:column; gap:14px; align-items:center; }
+#board-hud{ display:flex; justify-content:space-between; width:100%; max-width:640px; color:var(--ink-dim); font-size:.85rem; }
+#board-stage{
+  position:relative; background: var(--glass); border:1px solid var(--glass-strong);
+  border-radius: var(--radius-md); touch-action:none; overflow:hidden;
+}
+#board-outline{ position:absolute; inset:0; opacity:.18; pointer-events:none; }
+.piece{ position:absolute; cursor:grab; touch-action:none; filter: drop-shadow(0 3px 6px rgba(0,0,0,.45)); }
+.piece.locked{ cursor:default; filter: drop-shadow(0 1px 2px rgba(0,0,0,.25)); }
+.piece.dragging{ cursor:grabbing; z-index:999; filter: drop-shadow(0 8px 16px rgba(0,0,0,.55)); }
+#tray{
+  width:100%; max-width:640px; min-height:110px; border-radius: var(--radius-md);
+  background: rgba(255,255,255,.04); border:1px dashed var(--glass-strong);
+  position:relative; overflow:hidden;
+}
+#win-banner{
+  display:none; text-align:center; padding:20px; border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(255,209,102,.22), rgba(255,111,176,.22));
+  border:1px solid var(--glass-strong); margin-top:10px;
+}
+#win-banner h3{ font-family: var(--font-display); margin:0 0 6px; font-size:1.3rem;}
+.confetti{ position:fixed; top:-10px; z-index:500; border-radius:2px; pointer-events:none; }
+
+/* ---------- Galería ---------- */
+.gallery-grid{ display:grid; grid-template-columns: repeat(auto-fill,minmax(150px,1fr)); gap:16px; }
+.gallery-item{ border-radius: var(--radius-md); padding:10px; background: var(--glass); border:1px solid var(--glass-strong); }
+.frame{ border-radius:10px; overflow:hidden; }
+.frame img{ width:100%; display:block; }
+.frame-madera{ border:10px solid #8a5a34; box-shadow: inset 0 0 0 3px #5c3a20; }
+.frame-dorado{ border:10px solid; border-image: linear-gradient(135deg,#ffe9a8,#c9922b) 1; }
+.frame-neon{ border:4px solid var(--pink); box-shadow: 0 0 14px var(--pink), inset 0 0 10px rgba(255,111,176,.5); }
+.frame-floral{ border:12px solid #ffdce8; box-shadow: inset 0 0 0 3px #ff9fc4; }
+.frame-espacial{ border:10px solid #241249; box-shadow: 0 0 18px rgba(110,63,214,.6); }
+.frame-minimal{ border:6px solid #fff; }
+.gallery-item .caption{ margin-top:8px; font-size:.82rem; color: var(--ink-dim); text-align:center; font-family: var(--font-phrase); font-size:1rem; }
+.empty-state{ text-align:center; padding:50px 20px; color: var(--ink-dim); }
+.empty-state .big-icon{ font-size:2.4rem; display:block; margin-bottom:10px; }
+
+/* ---------- Frases (sección espacial) ---------- */
+#view-frases{ max-width:none; padding:0; }
+#space-scene{
+  position:relative; min-height: 70vh; border-radius:0; overflow:hidden;
+  background: radial-gradient(ellipse at 30% 20%, #2c1454 0%, #120826 55%, #08040f 100%);
+}
+.nebula{ position:absolute; border-radius:50%; filter: blur(40px); opacity:.55; }
+.particle{
+  position:absolute; width:3px; height:3px; background:#fff; border-radius:50%;
+  animation: floatUp linear infinite; opacity:.7;
+}
+@keyframes floatUp{
+  0%{ transform: translateY(0) translateX(0); opacity:0; }
+  10%{ opacity:.9;}
+  90%{ opacity:.5;}
+  100%{ transform: translateY(-320px) translateX(12px); opacity:0; }
+}
+.frases-intro{ position:relative; text-align:center; padding: 30px 20px 6px; z-index:2;}
+.frases-intro h2{ font-family: var(--font-display); font-size:1.6rem; margin:0 0 6px;}
+.frases-intro p{ color: var(--ink-dim); margin:0;}
+#orb{
+  position:absolute; left:50%; top:56%; transform:translate(-50%,-50%);
+  width:120px; height:120px; border-radius:50%; cursor:pointer; z-index:3;
+  background: radial-gradient(circle at 35% 30%, #fff6e5, var(--gold) 40%, var(--pink) 78%, var(--violet) 100%);
+  box-shadow: 0 0 40px 10px rgba(255,209,102,.45), 0 0 80px 30px rgba(255,111,176,.25);
+  animation: pulse 3.4s ease-in-out infinite;
+  border:none;
+}
+@keyframes pulse{
+  0%,100%{ box-shadow: 0 0 40px 10px rgba(255,209,102,.45), 0 0 80px 30px rgba(255,111,176,.25); transform:translate(-50%,-50%) scale(1); }
+  50%{ box-shadow: 0 0 55px 16px rgba(255,209,102,.6), 0 0 100px 40px rgba(255,111,176,.35); transform:translate(-50%,-50%) scale(1.05); }
+}
+#orb-hint{ position:absolute; left:50%; top:74%; transform:translateX(-50%); color: var(--ink-dim); font-size:.82rem; z-index:3; }
+
+/* ---------- Modales ---------- */
+.modal-overlay{
+  position:fixed; inset:0; background: rgba(6,3,16,.72); backdrop-filter: blur(6px);
+  display:none; align-items:center; justify-content:center; z-index:200; padding:20px;
+}
+.modal-overlay.open{ display:flex; }
+.modal-card{
+  background: linear-gradient(160deg, rgba(44,20,84,.92), rgba(20,10,40,.95));
+  border:1px solid var(--glass-strong); border-radius: var(--radius-lg);
+  padding: 30px 26px; max-width:420px; width:100%; text-align:center; position:relative;
+  animation: popIn .3s cubic-bezier(.2,1.4,.4,1);
+}
+@keyframes popIn{ from{ transform: scale(.85); opacity:0;} to{ transform:scale(1); opacity:1; } }
+.modal-close{
+  position:absolute; top:12px; right:14px; background:none; border:none; color: var(--ink-dim);
+  font-size:1.2rem; cursor:pointer;
+}
+#phrase-text{ font-family: var(--font-phrase); font-size:1.7rem; line-height:1.35; margin: 10px 0 22px; color:#fff; }
+.modal-actions{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+
+#book-modal .modal-card{ max-width:480px; max-height:80vh; display:flex; flex-direction:column; }
+#book-pages{ overflow-y:auto; margin-top:10px; padding-right:4px; }
+.book-page{
+  text-align:left; background: rgba(255,255,255,.05); border:1px solid var(--glass-strong);
+  border-radius: var(--radius-sm); padding:14px 16px; margin-bottom:10px; position:relative;
+}
+.book-page p{ font-family: var(--font-phrase); font-size:1.25rem; margin:0 0 6px; }
+.book-page small{ color: var(--ink-dim); }
+.book-page .del{ position:absolute; top:8px; right:10px; background:none; border:none; color: var(--ink-dim); cursor:pointer; }
+
+/* frame chooser modal */
+#frame-modal .swatches{ display:grid; grid-template-columns: repeat(3,1fr); gap:10px; margin:16px 0; }
+.swatch{ border-radius:12px; padding:14px 6px; cursor:pointer; background: var(--glass); border:2px solid transparent; font-size:.8rem;}
+.swatch.selected{ border-color: var(--pink); }
+.swatch .chip{ width:36px; height:36px; border-radius:50%; margin:0 auto 6px; }
+
+/* ---------- nav inferior (mobile) ---------- */
+#bottomnav{
+  position:fixed; bottom:0; left:0; right:0; z-index:40;
+  display:flex; justify-content:space-around; padding:10px 6px 14px;
+  background: linear-gradient(to top, rgba(10,5,24,.96), rgba(10,5,24,.75));
+  backdrop-filter: blur(10px); border-top:1px solid var(--glass-strong);
+}
+.nav-btn{
+  background:none; border:none; color: var(--ink-dim); font-family: var(--font-ui);
+  display:flex; flex-direction:column; align-items:center; gap:3px; font-size:.68rem;
+  cursor:pointer; padding:4px 10px; border-radius:12px; transition: color .18s ease;
+}
+.nav-btn .ic{ font-size:1.25rem; }
+.nav-btn.active{ color:#fff; }
+.nav-btn.active .ic{ filter: drop-shadow(0 0 6px rgba(255,111,176,.7)); }
+
+@media (min-width: 760px){
+  #bottomnav{ display:none; }
+  main{ padding-bottom:30px; }
+  #topbar{ padding: 16px 34px; }
+  .view{ padding: 30px 34px 10px; }
+}
+
+::-webkit-scrollbar{ width:8px; }
+::-webkit-scrollbar-thumb{ background: var(--glass-strong); border-radius:8px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stars-bg"></div>
+
+  <header id="topbar">
+    <div class="brand" data-goto="home"><span class="dragon">🐉</span> Dragoncita Lunaris</div>
+    <button id="book-btn" title="Tu libro de frases"><span>📖</span><span id="book-count"></span></button>
+  </header>
+
+  <main>
+    <!-- HOME -->
+    <section class="view active" id="view-home">
+      <div class="hero-card">
+        <h1>Arma piezas, arma cariño.</h1>
+        <p>Convierte una foto en un rompecabezas para armar con calma, guarda tus creaciones en una galería propia, y descubre una sorpresa entre estrellas cuando quieras sentirte acompañada.</p>
+        <button class="btn btn-primary" data-goto="catalogo">Crear un rompecabezas ✨</button>
+      </div>
+      <div class="home-grid">
+        <div class="home-tile" data-goto="catalogo">
+          <span class="icon">🖼️</span>
+          <strong>Nueva imagen</strong>
+          <span>Sube una foto o elige del catálogo</span>
+        </div>
+        <div class="home-tile" data-goto="galeria">
+          <span class="icon">🗂️</span>
+          <strong>Tu galería</strong>
+          <span>Revive los rompecabezas que ya armaste</span>
+        </div>
+        <div class="home-tile" data-goto="frases">
+          <span class="icon">🌌</span>
+          <strong>Rincón de frases</strong>
+          <span>Toca la esfera y recibe una frase</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- CATALOGO -->
+    <section class="view" id="view-catalogo">
+      <h1 class="page-title">Elige una imagen</h1>
+      <p class="page-sub">Puedes subir tu propia foto, o escoger algo del catálogo por categorías.</p>
+      <label class="upload-box">
+        <input type="file" id="file-input" accept="image/*">
+        <span style="font-size:1.6rem; display:block; margin-bottom:6px;">📷</span>
+        <strong>Subir tu foto</strong><br>
+        <span style="color:var(--ink-dim); font-size:.85rem;">Toca aquí para elegir una imagen de tu dispositivo</span>
+      </label>
+
+      <div id="cat-view">
+        <h2 style="font-family:var(--font-display); font-size:1.2rem; margin-bottom:12px;">Catálogo por categoría</h2>
+        <div class="cat-grid" id="cat-grid"></div>
+      </div>
+
+      <div id="cat-images-view" style="display:none;">
+        <div class="back-link" id="back-to-cats">← Volver a categorías</div>
+        <div class="img-grid" id="cat-images-grid"></div>
+      </div>
+    </section>
+
+    <!-- PIEZAS -->
+    <section class="view" id="view-piezas">
+      <div class="back-link" data-goto="catalogo">← Elegir otra imagen</div>
+      <h1 class="page-title">¿De cuántas piezas será tu rompecabezas?</h1>
+      <p class="page-sub">Elige el nivel de dificultad. Puedes ver una vista previa de la imagen abajo.</p>
+      <div class="selected-preview"><img id="selected-preview-img" alt="Imagen elegida"></div>
+      <div class="pieces-options" id="pieces-options"></div>
+      <div style="text-align:center;">
+        <button class="btn btn-primary" id="start-puzzle-btn">Armar rompecabezas 🧩</button>
+      </div>
+    </section>
+
+    <!-- TABLERO -->
+    <section class="view" id="view-tablero">
+      <div class="back-link" data-goto="piezas">← Cambiar dificultad</div>
+      <div id="board-wrap">
+        <div id="board-hud">
+          <span id="pieces-left">0 piezas restantes</span>
+          <span id="timer">00:00</span>
+        </div>
+        <div id="board-stage"><canvas id="board-outline"></canvas></div>
+        <div id="tray"></div>
+        <div id="win-banner">
+          <h3>¡Lo armaste! 💫</h3>
+          <p style="color:var(--ink-dim); margin:0 0 14px;">Guárdalo en tu galería con el marco que más te guste.</p>
+          <button class="btn btn-primary" id="save-gallery-btn">Guardar en la galería</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- GALERIA -->
+    <section class="view" id="view-galeria">
+      <h1 class="page-title">Tu galería</h1>
+      <p class="page-sub">Aquí viven los rompecabezas que ya armaste.</p>
+      <div class="gallery-grid" id="gallery-grid"></div>
+    </section>
+
+    <!-- FRASES -->
+    <section class="view" id="view-frases">
+      <div id="space-scene">
+        <div class="frases-intro">
+          <h2>Un rincón para ti</h2>
+          <p>Toca la esfera cuando quieras leer algo bonito.</p>
+        </div>
+        <div id="particles-layer"></div>
+        <button id="orb" title="Toca para recibir una frase"></button>
+        <div id="orb-hint">toca la esfera ✨</div>
+      </div>
+    </section>
+  </main>
+
+  <nav id="bottomnav">
+    <button class="nav-btn active" data-goto="home"><span class="ic">🏠</span>Inicio</button>
+    <button class="nav-btn" data-goto="catalogo"><span class="ic">🧩</span>Crear</button>
+    <button class="nav-btn" data-goto="galeria"><span class="ic">🗂️</span>Galería</button>
+    <button class="nav-btn" data-goto="frases"><span class="ic">🌌</span>Frases</button>
+  </nav>
+
+  <!-- MODAL: frase -->
+  <div class="modal-overlay" id="phrase-modal">
+    <div class="modal-card">
+      <button class="modal-close" data-close="phrase-modal">✕</button>
+      <div style="font-size:1.6rem;">💌</div>
+      <p id="phrase-text">—</p>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="save-phrase-btn">Guardar en mi libro 📖</button>
+        <button class="btn btn-ghost" id="another-phrase-btn">Otra frase</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: libro -->
+  <div class="modal-overlay" id="book-modal">
+    <div class="modal-card">
+      <button class="modal-close" data-close="book-modal">✕</button>
+      <h3 style="font-family:var(--font-display); margin:4px 0 0;">Tu libro de frases</h3>
+      <div id="book-pages"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: marco -->
+  <div class="modal-overlay" id="frame-modal">
+    <div class="modal-card">
+      <button class="modal-close" data-close="frame-modal">✕</button>
+      <h3 style="font-family:var(--font-display); margin:4px 0 10px;">Elige un marco</h3>
+      <img id="frame-preview-img" style="width:100%; border-radius:12px;">
+      <div class="swatches" id="frame-swatches"></div>
+      <input type="text" id="frame-caption" placeholder="Escribe una frase para acompañar la foto (opcional)" style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--glass-strong); background:rgba(255,255,255,.06); color:#fff; margin-bottom:14px; font-family:var(--font-ui);">
+      <button class="btn btn-primary" id="confirm-save-btn" style="width:100%;">Guardar en la galería</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   DRAGONCITA LUNARIS — lógica de la app
+   ============================================================ */
+const $  = (sel, ctx=document) => ctx.querySelector(sel);
+const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
+const uid = () => Math.random().toString(36).slice(2,9);
+
+const Store = {
+  get(key, fallback){ try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; } },
+  set(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){ console.warn('No se pudo guardar', e); } }
+};
+
+/* ---------------------------------------------------------
+   1. FONDO DE ESTRELLAS
+--------------------------------------------------------- */
+function buildStars(){
+  const layer = $('#stars-bg');
+  const count = window.innerWidth < 700 ? 45 : 90;
+  let html = '';
+  for(let i=0;i<count;i++){
+    const size = (Math.random()*2 + 1).toFixed(1);
+    const top = (Math.random()*100).toFixed(2);
+    const left = (Math.random()*100).toFixed(2);
+    const delay = (Math.random()*3).toFixed(2);
+    html += `<div class="star" style="width:${size}px;height:${size}px;top:${top}%;left:${left}%;animation-delay:${delay}s;"></div>`;
+  }
+  layer.innerHTML = html;
+}
+buildStars();
+
+/* ---------------------------------------------------------
+   2. NAVEGACIÓN
+--------------------------------------------------------- */
+function showView(name){
+  $$('.view').forEach(v => v.classList.remove('active'));
+  const target = $('#view-' + name);
+  if(target) target.classList.add('active');
+  $$('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.goto === name));
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-goto]');
+  if(el){ showView(el.dataset.goto); }
+});
+
+/* ---------------------------------------------------------
+   3. CATÁLOGO — arte generado por categoría (sin imágenes externas)
+--------------------------------------------------------- */
+const CATEGORIES = [
+  { id:'amor', label:'Amor', icon:'💖', palette:['#ff6fb0','#ff9ecb','#6e3fd6'], shape:'heart' },
+  { id:'galaxia', label:'Galaxia', icon:'🌌', palette:['#1c0e3a','#6e3fd6','#ffd166'], shape:'stars' },
+  { id:'dragones', label:'Dragones', icon:'🐉', palette:['#0e3d2c','#2e8b57','#c8f7dc'], shape:'scales' },
+  { id:'animales', label:'Animales', icon:'🐾', palette:['#7a4a20','#d9a066','#fff3d6'], shape:'paws' },
+  { id:'gatosperros', label:'Gatos y perritos', icon:'🐱', palette:['#ffb3d6','#fff0f5','#c98bd6'], shape:'paws' },
+  { id:'naturaleza', label:'Naturaleza', icon:'🌸', palette:['#1f6b3a','#7ed957','#e8ffe0'], shape:'leaves' },
+  { id:'oceano', label:'Océano', icon:'🌊', palette:['#053a5f','#1e90c9','#bdf3ff'], shape:'waves' },
+  { id:'kawaii', label:'Kawaii', icon:'🌈', palette:['#ffd6ec','#c9b6ff','#fff'], shape:'dots' },
+  { id:'retro', label:'Retro / Pixel', icon:'🕹️', palette:['#100820','#ff6fb0','#6fe3c9'], shape:'pixel' },
+  { id:'castillos', label:'Castillos', icon:'🏰', palette:['#241249','#8a6fd6','#ffe9a8'], shape:'towers' },
+];
+
+function drawArtwork(canvas, category, seed){
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const rnd = mulberry32(seed);
+  const [c1,c2,c3] = category.palette;
+  const grad = ctx.createLinearGradient(0,0,W,H);
+  grad.addColorStop(0, c1); grad.addColorStop(.55, c2); grad.addColorStop(1, c3);
+  ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
+
+  ctx.globalAlpha = .85;
+  switch(category.shape){
+    case 'heart':
+      for(let i=0;i<7;i++) drawHeart(ctx, rnd()*W, rnd()*H, 18+rnd()*36, c3, .5+rnd()*.4);
+      break;
+    case 'stars':
+      for(let i=0;i<60;i++) drawStar(ctx, rnd()*W, rnd()*H, 1+rnd()*2.4, '#fff');
+      for(let i=0;i<3;i++) drawGlowCircle(ctx, rnd()*W, rnd()*H, 40+rnd()*70, c3);
+      break;
+    case 'scales':
+      for(let y=0;y<H;y+=26){ for(let x=0;x<W;x+=26){ drawScale(ctx, x + (Math.floor(y/26)%2?13:0), y, 15, c3); } }
+      break;
+    case 'paws':
+      for(let i=0;i<10;i++) drawPaw(ctx, rnd()*W, rnd()*H, 12+rnd()*10, c1);
+      break;
+    case 'leaves':
+      for(let i=0;i<14;i++) drawLeaf(ctx, rnd()*W, rnd()*H, 14+rnd()*16, c1);
+      break;
+    case 'waves':
+      for(let i=0;i<5;i++) drawWaveBand(ctx, H*(i/5), W, H/5, i%2? c1:c3);
+      break;
+    case 'dots':
+      for(let i=0;i<26;i++) drawGlowCircle(ctx, rnd()*W, rnd()*H, 6+rnd()*16, i%2? c1:c3);
+      break;
+    case 'pixel':
+      for(let y=0;y<H;y+=18){ for(let x=0;x<W;x+=18){ if(rnd()>.6){ ctx.fillStyle = rnd()>.5? c2:c3; ctx.fillRect(x,y,16,16); } } }
+      break;
+    case 'towers':
+      drawCastle(ctx, W, H, c3);
+      break;
+  }
+  ctx.globalAlpha = 1;
+}
+function mulberry32(a){ return function(){ let t = a += 0x6D2B79F5; t = Math.imul(t ^ t>>>15, t | 1); t ^= t + Math.imul(t ^ t>>>7, t | 61); return ((t ^ t>>>14) >>> 0) / 4294967296; }; }
+function drawHeart(ctx,x,y,size,color,alpha){
+  ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = color; ctx.translate(x,y);
+  ctx.beginPath();
+  ctx.moveTo(0, size*0.3);
+  ctx.bezierCurveTo(0,-size*0.2, -size,-size*0.2, -size, size*0.3);
+  ctx.bezierCurveTo(-size, size*0.75, 0, size*0.9, 0, size*1.2);
+  ctx.bezierCurveTo(0, size*0.9, size, size*0.75, size, size*0.3);
+  ctx.bezierCurveTo(size,-size*0.2, 0,-size*0.2, 0, size*0.3);
+  ctx.fill(); ctx.restore();
+}
+function drawStar(ctx,x,y,r,color){ ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); }
+function drawGlowCircle(ctx,x,y,r,color){
+  const g = ctx.createRadialGradient(x,y,0,x,y,r); g.addColorStop(0,color); g.addColorStop(1,'transparent');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+}
+function drawScale(ctx,x,y,r,color){ ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI,false); ctx.stroke(); }
+function drawPaw(ctx,x,y,r,color){
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.ellipse(x,y,r*.9,r*.7,0,0,Math.PI*2); ctx.fill();
+  const offs=[[-r*.9,-r*.9],[ -r*.3,-r*1.3],[r*.3,-r*1.3],[r*.9,-r*.9]];
+  offs.forEach(o=>{ ctx.beginPath(); ctx.ellipse(x+o[0], y+o[1], r*.32, r*.4, 0,0,Math.PI*2); ctx.fill(); });
+}
+function drawLeaf(ctx,x,y,size,color){
+  ctx.save(); ctx.translate(x,y); ctx.rotate(Math.random()*Math.PI*2); ctx.fillStyle = color;
+  ctx.beginPath(); ctx.ellipse(0,0,size,size*.5,0,0,Math.PI*2); ctx.fill(); ctx.restore();
+}
+function drawWaveBand(ctx, y, W, H, color){
+  ctx.fillStyle = color; ctx.globalAlpha = .35; ctx.beginPath(); ctx.moveTo(0,y+H/2);
+  for(let x=0;x<=W;x+=20){ ctx.lineTo(x, y+H/2 + Math.sin(x/26)*10); }
+  ctx.lineTo(W,y+H); ctx.lineTo(0,y+H); ctx.closePath(); ctx.fill(); ctx.globalAlpha=.85;
+}
+function drawCastle(ctx,W,H,color){
+  ctx.fillStyle = color;
+  const baseY = H*.62, towerW = W*.14;
+  [0.18,0.42,0.66].forEach((fx,i)=>{
+    const x = W*fx, h = H*(0.28 + (i===1?0.12:0));
+    ctx.fillRect(x, baseY-h, towerW, h);
+    ctx.beginPath(); ctx.moveTo(x-6, baseY-h); ctx.lineTo(x+towerW/2, baseY-h-26); ctx.lineTo(x+towerW+6, baseY-h); ctx.closePath(); ctx.fill();
+  });
+  ctx.fillRect(0, baseY, W, H-baseY);
+}
+
+function renderCatalog(){
+  const grid = $('#cat-grid');
+  grid.innerHTML = '';
+  CATEGORIES.forEach((cat, idx) => {
+    const tile = document.createElement('div');
+    tile.className = 'cat-tile';
+    tile.innerHTML = `<canvas width="220" height="220"></canvas><div class="label">${cat.icon} ${cat.label}</div>`;
+    drawArtwork(tile.querySelector('canvas'), cat, idx*97+11);
+    tile.addEventListener('click', () => openCategory(cat));
+    grid.appendChild(tile);
+  });
+}
+function openCategory(cat){
+  $('#cat-view').style.display = 'none';
+  $('#cat-images-view').style.display = 'block';
+  const grid = $('#cat-images-grid');
+  grid.innerHTML = '';
+  for(let i=0;i<6;i++){
+    const tile = document.createElement('div');
+    tile.className = 'img-tile';
+    tile.innerHTML = `<canvas width="260" height="260"></canvas>`;
+    const cv = tile.querySelector('canvas');
+    drawArtwork(cv, cat, i*233 + cat.id.length*17 + 5);
+    tile.addEventListener('click', () => selectImage(cv.toDataURL('image/png')));
+    grid.appendChild(tile);
+  }
+}
+$('#back-to-cats').addEventListener('click', () => {
+  $('#cat-view').style.display = 'block';
+  $('#cat-images-view').style.display = 'none';
+});
+renderCatalog();
+
+$('#file-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => selectImage(reader.result);
+  reader.readAsDataURL(file);
+});
+
+let currentImage = null; // dataURL elegido
+function selectImage(dataUrl){
+  currentImage = dataUrl;
+  $('#selected-preview-img').src = dataUrl;
+  showView('piezas');
+}
+
+/* ---------------------------------------------------------
+   4. SELECCIÓN DE PIEZAS
+--------------------------------------------------------- */
+const PIECE_OPTIONS = [
+  { key:'facil', label:'Fácil', count:12, cols:4, rows:3 },
+  { key:'medio', label:'Medio', count:48, cols:8, rows:6 },
+  { key:'dificil', label:'Difícil', count:100, cols:10, rows:10 },
+  { key:'experto', label:'Experto', count:200, cols:20, rows:10 },
+];
+let selectedPieceOpt = PIECE_OPTIONS[0];
+
+function renderPieceOptions(){
+  const wrap = $('#pieces-options');
+  wrap.innerHTML = '';
+  PIECE_OPTIONS.forEach(opt => {
+    const div = document.createElement('div');
+    div.className = 'piece-opt' + (opt.key===selectedPieceOpt.key ? ' selected':'');
+    div.dataset.key = opt.key;
+    div.innerHTML = `
+      <div class="grid-preview" style="grid-template-columns:repeat(${opt.cols},1fr); grid-template-rows:repeat(${opt.rows},1fr);">
+        ${Array(opt.cols*opt.rows).fill('<div></div>').join('')}
+      </div>
+      <strong>${opt.label}</strong>
+      <span>${opt.count} piezas</span>`;
+    div.addEventListener('click', () => { selectedPieceOpt = opt; renderPieceOptions(); });
+    wrap.appendChild(div);
+  });
+}
+renderPieceOptions();
+
+$('#start-puzzle-btn').addEventListener('click', () => {
+  if(!currentImage){ alert('Primero elige una imagen 🙂'); return; }
+  showView('tablero');
+  buildPuzzle(currentImage, selectedPieceOpt);
+});
+
+/* ---------------------------------------------------------
+   5. MOTOR DE ROMPECABEZAS
+--------------------------------------------------------- */
+let puzzleState = null;
+
+function buildPuzzle(imageSrc, opt){
+  const img = new Image();
+  img.onload = () => {
+    const stage = $('#board-stage');
+    const maxW = Math.min(640, window.innerWidth - 40);
+    const boardW = maxW;
+    const boardH = Math.round(maxW * (img.naturalHeight / img.naturalWidth));
+    stage.style.width = boardW + 'px';
+    stage.style.height = boardH + 'px';
+
+    const cols = opt.cols, rows = opt.rows;
+    const cellW = boardW / cols, cellH = boardH / rows;
+    const pad = Math.round(Math.min(cellW, cellH) * 0.32);
+
+    // dibujar imagen a un canvas del tamaño del tablero para usarla como fondo de piezas
+    const srcCanvas = document.createElement('canvas');
+    srcCanvas.width = boardW; srcCanvas.height = boardH;
+    srcCanvas.getContext('2d').drawImage(img, 0, 0, boardW, boardH);
+    const boardImageUrl = srcCanvas.toDataURL('image/png');
+
+    // dibujar contorno guía tenue
+    const outline = $('#board-outline');
+    outline.width = boardW; outline.height = boardH;
+    const octx = outline.getContext('2d');
+    octx.drawImage(img, 0, 0, boardW, boardH);
+
+    // matrices de bordes
+    const hEdges = []; // entre col c y c+1, para cada fila -> tab horizontal (derecha/izquierda)
+    for(let r=0;r<rows;r++){ hEdges.push([]); for(let c=0;c<cols-1;c++){ hEdges[r].push(Math.random() > .5 ? 1 : -1); } }
+    const vEdges = []; // entre fila r y r+1, para cada columna -> tab vertical (abajo/arriba)
+    for(let r=0;r<rows-1;r++){ vEdges.push([]); for(let c=0;c<cols;c++){ vEdges[r].push(Math.random() > .5 ? 1 : -1); } }
+
+    const tray = $('#tray');
+    tray.innerHTML = '';
+    $('#board-stage').querySelectorAll('.piece').forEach(p=>p.remove());
+    $('#win-banner').style.display = 'none';
+
+    const pieces = [];
+    for(let r=0;r<rows;r++){
+      for(let c=0;c<cols;c++){
+        const top    = r===0 ? 0 : -vEdges[r-1][c];
+        const bottom = r===rows-1 ? 0 : vEdges[r][c];
+        const left   = c===0 ? 0 : -hEdges[r][c-1];
+        const right  = c===cols-1 ? 0 : hEdges[r][c];
+        const amp = pad * 0.72;
+        const pathStr = piecePath(cellW, cellH, pad, top*amp, right*amp, bottom*amp, left*amp);
+
+        const el = document.createElement('div');
+        el.className = 'piece';
+        el.style.width = (cellW + 2*pad) + 'px';
+        el.style.height = (cellH + 2*pad) + 'px';
+        el.style.backgroundImage = `url(${boardImageUrl})`;
+        el.style.backgroundSize = boardW + 'px ' + boardH + 'px';
+        el.style.backgroundPosition = `-${c*cellW - pad}px -${r*cellH - pad}px`;
+        el.style.clipPath = `path('${pathStr}')`;
+        el.style.webkitClipPath = `path('${pathStr}')`;
+
+        const homeX = c*cellW - pad, homeY = r*cellH - pad;
+        const piece = { el, r, c, homeX, homeY, locked:false };
+        pieces.push(piece);
+
+        // posición inicial: dispersa dentro de la bandeja
+        const trayW = tray.clientWidth || boardW;
+        const startX = Math.random() * Math.max(10, trayW - (cellW+2*pad));
+        const startY = Math.random() * 60;
+        el.style.left = startX + 'px';
+        el.style.top = startY + 'px';
+        tray.appendChild(el);
+        makeDraggable(piece);
+      }
+    }
+    // altura de la bandeja según cantidad de piezas
+    tray.style.minHeight = Math.max(110, Math.ceil(pieces.length/6) * (cellH*0.5+30)) + 'px';
+
+    puzzleState = { pieces, boardW, boardH, cellW, cellH, pad, total: pieces.length, placed:0, startTime: Date.now(), timerId:null };
+    $('#pieces-left').textContent = `${pieces.length} piezas restantes`;
+    startTimer();
+  };
+  img.src = imageSrc;
+}
+
+function piecePath(cw, ch, pad, top, right, bottom, left){
+  const x0 = pad, y0 = pad, x1 = pad+cw, y1 = pad+ch;
+  let d = `M ${x0} ${y0} `;
+  d += edgeSeg(x0,y0, x1,y0, top) + ' ';
+  d += edgeSeg(x1,y0, x1,y1, right) + ' ';
+  d += edgeSeg(x1,y1, x0,y1, bottom) + ' ';
+  d += edgeSeg(x0,y1, x0,y0, left) + ' Z';
+  return d;
+}
+function edgeSeg(x1,y1,x2,y2, amp){
+  if(!amp) return `L ${x2} ${y2}`;
+  const dx = x2-x1, dy = y2-y1, len = Math.hypot(dx,dy);
+  const ux = dx/len, uy = dy/len;
+  const nx = -uy, ny = ux; // normal (interior para trazo horario) -> usamos -amp para que amp>0 = hacia afuera
+  const off = -amp;
+  const pt = (t, alongExtra=0) => {
+    const bx = x1 + dx*t + ux*alongExtra + nx*off;
+    const by = y1 + dy*t + uy*alongExtra + ny*off;
+    return `${bx.toFixed(2)} ${by.toFixed(2)}`;
+  };
+  const s1 = `${(x1+dx*0.35).toFixed(2)} ${(y1+dy*0.35).toFixed(2)}`;
+  const s2 = `${(x1+dx*0.65).toFixed(2)} ${(y1+dy*0.65).toFixed(2)}`;
+  return `L ${s1} C ${pt(0.35)} ${pt(0.42)} ${pt(0.5)} C ${pt(0.58)} ${pt(0.65)} ${s2}`;
+}
+
+function makeDraggable(piece){
+  const el = piece.el;
+  let dragging = false, offX=0, offY=0;
+  const stageRect = () => $('#board-stage').getBoundingClientRect();
+  const trayRect = () => $('#tray').getBoundingClientRect();
+
+  function pointerDown(e){
+    if(piece.locked) return;
+    dragging = true;
+    el.classList.add('dragging');
+    document.body.appendChild(el); // subir al frente (reparent al body durante el drag)
+    el.style.position = 'fixed';
+    const rect = el.getBoundingClientRect();
+    const p = getPoint(e);
+    offX = p.x - rect.left; offY = p.y - rect.top;
+    el.style.left = rect.left + 'px';
+    el.style.top = rect.top + 'px';
+    el.setPointerCapture && el.setPointerCapture(e.pointerId);
+  }
+  function pointerMove(e){
+    if(!dragging) return;
+    const p = getPoint(e);
+    el.style.left = (p.x - offX) + 'px';
+    el.style.top = (p.y - offY) + 'px';
+  }
+  function pointerUp(e){
+    if(!dragging) return;
+    dragging = false;
+    el.classList.remove('dragging');
+    const sRect = stageRect();
+    const elRect = el.getBoundingClientRect();
+    // posición relativa al stage
+    const relX = elRect.left - sRect.left;
+    const relY = elRect.top - sRect.top;
+    const dist = Math.hypot(relX - piece.homeX, relY - piece.homeY);
+    const threshold = Math.min(puzzleState.cellW, puzzleState.cellH) * 0.35;
+    if(dist < threshold){
+      // encaja
+      $('#board-stage').appendChild(el);
+      el.style.position = 'absolute';
+      el.style.left = piece.homeX + 'px';
+      el.style.top = piece.homeY + 'px';
+      el.classList.add('locked');
+      piece.locked = true;
+      puzzleState.placed++;
+      updateHud();
+      checkWin();
+    } else {
+      // se queda donde se soltó pero reinsertada en el stage para que las coordenadas sean consistentes
+      $('#board-stage').appendChild(el);
+      el.style.position = 'absolute';
+      el.style.left = relX + 'px';
+      el.style.top = relY + 'px';
+    }
+  }
+  function getPoint(e){
+    if(e.touches && e.touches[0]) return {x:e.touches[0].clientX, y:e.touches[0].clientY};
+    return {x:e.clientX, y:e.clientY};
+  }
+  el.addEventListener('pointerdown', pointerDown);
+  window.addEventListener('pointermove', pointerMove);
+  window.addEventListener('pointerup', pointerUp);
+}
+
+function updateHud(){
+  const left = puzzleState.total - puzzleState.placed;
+  $('#pieces-left').textContent = left>0 ? `${left} piezas restantes` : '¡Completo!';
+}
+function startTimer(){
+  clearInterval(puzzleState && puzzleState.timerId);
+  const el = $('#timer');
+  puzzleState.timerId = setInterval(() => {
+    const s = Math.floor((Date.now()-puzzleState.startTime)/1000);
+    const mm = String(Math.floor(s/60)).padStart(2,'0');
+    const ss = String(s%60).padStart(2,'0');
+    el.textContent = `${mm}:${ss}`;
+  }, 500);
+}
+function checkWin(){
+  if(puzzleState.placed >= puzzleState.total){
+    clearInterval(puzzleState.timerId);
+    $('#win-banner').style.display = 'block';
+    launchConfetti();
+  }
+}
+function launchConfetti(){
+  const colors = ['#ff6fb0','#ffd166','#6e3fd6','#6fe3c9','#fff'];
+  for(let i=0;i<60;i++){
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    const size = 6 + Math.random()*6;
+    c.style.width = size+'px'; c.style.height = (size*0.4)+'px';
+    c.style.background = colors[Math.floor(Math.random()*colors.length)];
+    c.style.left = Math.random()*100 + 'vw';
+    c.style.transform = `rotate(${Math.random()*360}deg)`;
+    document.body.appendChild(c);
+    const duration = 1800 + Math.random()*1400;
+    c.animate([
+      { transform: c.style.transform, top:'-10px', opacity:1 },
+      { transform: `rotate(${Math.random()*720}deg)`, top: '100vh', opacity:.9 }
+    ], { duration, easing:'ease-in' }).onfinish = () => c.remove();
+  }
+}
+
+/* ---------------------------------------------------------
+   6. GALERÍA
+--------------------------------------------------------- */
+const FRAMES = [
+  { key:'madera', label:'Madera', chip:'#8a5a34' },
+  { key:'dorado', label:'Dorado', chip:'#c9922b' },
+  { key:'neon', label:'Neón', chip:'#ff6fb0' },
+  { key:'floral', label:'Floral', chip:'#ff9fc4' },
+  { key:'espacial', label:'Espacial', chip:'#6e3fd6' },
+  { key:'minimal', label:'Minimalista', chip:'#ffffff' },
+];
+let pendingSaveImage = null;
+let selectedFrame = FRAMES[0].key;
+
+$('#save-gallery-btn').addEventListener('click', () => {
+  // componer imagen final desde el stage (fondo original ya que todas las piezas están encajadas)
+  pendingSaveImage = $('#board-outline').toDataURL('image/png');
+  $('#frame-preview-img').src = pendingSaveImage;
+  selectedFrame = FRAMES[0].key;
+  renderFrameSwatches();
+  $('#frame-caption').value = '';
+  openModal('frame-modal');
+});
+function renderFrameSwatches(){
+  const wrap = $('#frame-swatches');
+  wrap.innerHTML = '';
+  FRAMES.forEach(f => {
+    const d = document.createElement('div');
+    d.className = 'swatch' + (f.key===selectedFrame?' selected':'');
+    d.innerHTML = `<div class="chip" style="background:${f.chip}"></div>${f.label}`;
+    d.addEventListener('click', () => { selectedFrame = f.key; renderFrameSwatches(); });
+    wrap.appendChild(d);
+  });
+}
+$('#confirm-save-btn').addEventListener('click', () => {
+  const gallery = Store.get('lunaris_gallery', []);
+  gallery.unshift({ id: uid(), img: pendingSaveImage, frame: selectedFrame, caption: $('#frame-caption').value.trim(), date: Date.now() });
+  Store.set('lunaris_gallery', gallery);
+  closeModal('frame-modal');
+  renderGallery();
+  showView('galeria');
+});
+function renderGallery(){
+  const grid = $('#gallery-grid');
+  const gallery = Store.get('lunaris_gallery', []);
+  if(!gallery.length){
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><span class="big-icon">🧩</span>Todavía no has guardado ningún rompecabezas.<br>¡Arma el primero desde "Crear"!</div>`;
+    return;
+  }
+  grid.innerHTML = '';
+  gallery.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'gallery-item';
+    div.innerHTML = `
+      <div class="frame frame-${item.frame}"><img src="${item.img}"></div>
+      ${item.caption ? `<div class="caption">"${escapeHtml(item.caption)}"</div>` : ''}
+    `;
+    grid.appendChild(div);
+  });
+}
+function escapeHtml(s){ return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+renderGallery();
+
+/* ---------------------------------------------------------
+   7. RINCÓN DE FRASES
+--------------------------------------------------------- */
+const PHRASES = [
+  "Eres bonita por dentro y por fuera, y eso no cambia con los días difíciles.",
+  "Tu sonrisa tiene ese tipo de luz que ilumina hasta los días grises.",
+  "Hay una belleza en ti que no depende del espejo, se nota en cómo tratas a los demás.",
+  "Eres bonita incluso en los días en que tú misma no lo crees.",
+  "Tienes esa clase de belleza que se queda en la mente, no solo en los ojos.",
+  "No estás sola, aunque a veces lo sientas: siempre habrá alguien pensando en ti con cariño.",
+  "Eres compañía, eres calma, eres ese lugar seguro al que uno quiere volver.",
+  "Te acompaño en las buenas, en las malas, y en las que ni siquiera tienen nombre todavía.",
+  "Aunque la distancia exista, mi cariño por ti no conoce de kilómetros.",
+  "Cuenta conmigo hoy, mañana y en todos los días que hagan falta.",
+  "Hoy, como todos los días, alguien te ama profundamente. Ese alguien soy yo.",
+  "Te quiero con la calma de lo que ya sé que es para siempre.",
+  "Eres de las personas que se aman sin condiciones ni horarios.",
+  "Mi cariño por ti no se apaga ni en los días silenciosos.",
+  "Eres, sin exagerar, de lo más bonito que me ha pasado.",
+  "Mereces todo lo bonito que la vida te está guardando, y un poco más.",
+  "Cada parte de ti — tus dudas, tus risas, tus silencios — vale la pena ser amada.",
+  "No hace falta que seas perfecta para ser increíble, ya lo eres siendo tú.",
+  "Eres de esas personas que hacen que un día cualquiera se sienta especial.",
+  "Tu valor no lo define un mal día ni una mala racha.",
+  "Si hoy el día pesa, recuerda que también va a pasar, y yo sigo aquí.",
+  "Está bien no estar bien; yo te sigo queriendo igual en esos días.",
+  "No tienes que cargar todo sola, para eso estoy yo.",
+  "Eres más fuerte de lo que crees, y más amada de lo que imaginas.",
+  "Respira: ya has salido adelante antes, y esta vez también lo harás.",
+  "Contigo hasta lo simple se vuelve bonito de recordar.",
+  "Eres ese tipo de persona que hace que todo tenga más sentido.",
+  "De todas las historias posibles, me quedo con la nuestra.",
+  "Eres mi lugar favorito para volver, sin importar el día que haya tenido.",
+  "Contigo, hasta el silencio se siente acompañado.",
+  "Ojalá pudieras verte un segundo como yo te veo.",
+  "Eres un motivo de más para sonreír en cualquier día de la semana.",
+  "Gracias por existir tal cual eres, sin necesitar cambiar nada.",
+  "Tu forma de ser tiene una calidez que no todos tienen.",
+  "Aunque no lo digas siempre, sé lo fuerte que eres cada día.",
+  "Eres de las personas que hacen que valga la pena quedarse.",
+  "No necesitas hacer nada extraordinario para ser extraordinaria.",
+  "Tu compañía es de esas cosas que uno no cambia por nada.",
+  "Hoy quiero recordarte lo mucho que iluminas donde sea que estés.",
+  "Eres el tipo de persona por la que uno se queda sin dudarlo."
+];
+
+function buildParticles(){
+  const layer = $('#particles-layer');
+  layer.innerHTML = '';
+  const count = 26;
+  for(let i=0;i<count;i++){
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const left = Math.random()*100;
+    const dur = 6 + Math.random()*8;
+    const delay = Math.random()*8;
+    const bottom = Math.random()*40;
+    p.style.left = left+'%';
+    p.style.bottom = bottom+'%';
+    p.style.animationDuration = dur+'s';
+    p.style.animationDelay = delay+'s';
+    layer.appendChild(p);
+  }
+  // un par de nebulosas de fondo
+  ['nebula1','nebula2'].forEach((cls,i)=>{
+    const n = document.createElement('div');
+    n.className = 'nebula';
+    n.style.width = (200+i*80)+'px';
+    n.style.height = (200+i*80)+'px';
+    n.style.left = (10+i*55)+'%';
+    n.style.top = (10+i*30)+'%';
+    n.style.background = i===0 ? 'radial-gradient(circle, rgba(255,111,176,.5), transparent 70%)' : 'radial-gradient(circle, rgba(110,63,214,.5), transparent 70%)';
+    layer.appendChild(n);
+  });
+}
+buildParticles();
+
+function pickPhrase(){ return PHRASES[Math.floor(Math.random()*PHRASES.length)]; }
+let currentPhrase = '';
+$('#orb').addEventListener('click', () => {
+  currentPhrase = pickPhrase();
+  $('#phrase-text').textContent = currentPhrase;
+  openModal('phrase-modal');
+});
+$('#another-phrase-btn').addEventListener('click', () => {
+  currentPhrase = pickPhrase();
+  $('#phrase-text').textContent = currentPhrase;
+});
+$('#save-phrase-btn').addEventListener('click', () => {
+  const saved = Store.get('lunaris_phrases', []);
+  saved.unshift({ id: uid(), text: currentPhrase, date: Date.now() });
+  Store.set('lunaris_phrases', saved);
+  updateBookCount();
+  $('#save-phrase-btn').textContent = 'Guardada ✓';
+  setTimeout(()=> $('#save-phrase-btn').textContent = 'Guardar en mi libro 📖', 1400);
+});
+
+function updateBookCount(){
+  const saved = Store.get('lunaris_phrases', []);
+  const badge = $('#book-count');
+  if(saved.length){ badge.style.display='block'; badge.textContent = saved.length; }
+  else { badge.style.display='none'; }
+}
+function renderBook(){
+  const wrap = $('#book-pages');
+  const saved = Store.get('lunaris_phrases', []);
+  if(!saved.length){
+    wrap.innerHTML = `<div class="empty-state"><span class="big-icon">📖</span>Aún no has guardado frases.<br>Toca la esfera en "Frases" para descubrir una.</div>`;
+    return;
+  }
+  wrap.innerHTML = saved.map(p => `
+    <div class="book-page" data-id="${p.id}">
+      <button class="del" title="Eliminar">✕</button>
+      <p>"${escapeHtml(p.text)}"</p>
+      <small>${new Date(p.date).toLocaleDateString()}</small>
+    </div>
+  `).join('');
+  $$('.book-page .del', wrap).forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const id = e.target.closest('.book-page').dataset.id;
+      const saved2 = Store.get('lunaris_phrases', []).filter(p => p.id !== id);
+      Store.set('lunaris_phrases', saved2);
+      renderBook();
+      updateBookCount();
+    });
+  });
+}
+$('#book-btn').addEventListener('click', () => { renderBook(); openModal('book-modal'); });
+updateBookCount();
+
+/* ---------------------------------------------------------
+   8. MODALES genéricos
+--------------------------------------------------------- */
+function openModal(id){ $('#'+id).classList.add('open'); }
+function closeModal(id){ $('#'+id).classList.remove('open'); }
+document.addEventListener('click', (e) => {
+  const closeEl = e.target.closest('[data-close]');
+  if(closeEl){ closeModal(closeEl.dataset.close); }
+  if(e.target.classList.contains('modal-overlay')){ e.target.classList.remove('open'); }
+});
+</script>
+</body>
+</html>
