@@ -1,0 +1,2387 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Refugio — Plataforma Multimedia Interactiva</title>
+<!--
+  ============================================================
+  REFUGIO — Plataforma multimedia interactiva (single-file build)
+  Demo Mode: funciona sin backend ni claves API.
+  Módulos: Dashboard, Rompecabezas, Frases, Audiobook (PDF+TTS),
+  Idiomas (capa AIProvider con demo local), Ambiente (WebAudio),
+  Música local + YouTube Embed, Configuración, Partículas.
+  Persistencia: localStorage (StorageManager).
+  ============================================================
+-->
+<style>
+/* ============ TOKENS & TEMAS ============ */
+:root{
+  --radius:16px; --radius-sm:10px;
+  --sidebar-w:236px; --player-h:64px;
+  --font-s:14px; --font-m:16px; --font-l:18px;
+}
+body[data-theme="luna"]{
+  --bg:#0b0e1d; --bg2:#141834; --accent:#8b7cf6; --accent2:#5eead4;
+  --text:#eef0ff; --muted:#9aa3c7; --card:rgba(255,255,255,.06);
+  --card-solid:#181c38; --border:rgba(255,255,255,.12); --shadow:0 10px 30px rgba(0,0,0,.45);
+  --bg-glow:radial-gradient(1000px 600px at 80% -10%, rgba(139,124,246,.22), transparent 60%),
+            radial-gradient(800px 500px at -10% 110%, rgba(94,234,212,.12), transparent 60%);
+}
+body[data-theme="aurora"]{
+  --bg:#071a1e; --bg2:#0d2b30; --accent:#4fd1c5; --accent2:#b794f6;
+  --text:#eafffb; --muted:#8fb8b3; --card:rgba(255,255,255,.06);
+  --card-solid:#0f2c31; --border:rgba(255,255,255,.12); --shadow:0 10px 30px rgba(0,0,0,.45);
+  --bg-glow:radial-gradient(1000px 600px at 70% -10%, rgba(79,209,197,.2), transparent 60%),
+            radial-gradient(800px 500px at 0% 110%, rgba(183,148,246,.18), transparent 60%);
+}
+body[data-theme="oceano"]{
+  --bg:#041824; --bg2:#0a2c40; --accent:#38bdf8; --accent2:#67e8f9;
+  --text:#eaf7ff; --muted:#8fb6c9; --card:rgba(255,255,255,.06);
+  --card-solid:#0b2f45; --border:rgba(255,255,255,.12); --shadow:0 10px 30px rgba(0,0,0,.5);
+  --bg-glow:radial-gradient(1000px 600px at 75% -10%, rgba(56,189,248,.2), transparent 60%),
+            radial-gradient(800px 500px at 0% 110%, rgba(14,165,233,.16), transparent 60%);
+}
+body[data-theme="bosque"]{
+  --bg:#08160f; --bg2:#12291c; --accent:#4ade80; --accent2:#a3e635;
+  --text:#eefbf1; --muted:#94b89e; --card:rgba(255,255,255,.06);
+  --card-solid:#14291d; --border:rgba(255,255,255,.12); --shadow:0 10px 30px rgba(0,0,0,.5);
+  --bg-glow:radial-gradient(1000px 600px at 75% -10%, rgba(74,222,128,.16), transparent 60%),
+            radial-gradient(800px 500px at 0% 110%, rgba(163,230,53,.12), transparent 60%);
+}
+body[data-theme="atardecer"]{
+  --bg:#1c0f1e; --bg2:#33182e; --accent:#fb923c; --accent2:#f472b6;
+  --text:#fff2ea; --muted:#cfa8a0; --card:rgba(255,255,255,.06);
+  --card-solid:#381b31; --border:rgba(255,255,255,.12); --shadow:0 10px 30px rgba(0,0,0,.5);
+  --bg-glow:radial-gradient(1000px 600px at 75% -10%, rgba(251,146,60,.2), transparent 60%),
+            radial-gradient(800px 500px at 0% 110%, rgba(244,114,182,.16), transparent 60%);
+}
+body[data-theme="custom"]{
+  --bg:#101018; --bg2:#1b1b28; --accent:#8b7cf6; --accent2:#5eead4;
+  --text:#f2f2fa; --muted:#a3a3b8; --card:rgba(255,255,255,.06);
+  --card-solid:#1d1d2c; --border:rgba(255,255,255,.12); --shadow:0 10px 30px rgba(0,0,0,.5);
+  --bg-glow:radial-gradient(1000px 600px at 75% -10%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 60%),
+            radial-gradient(800px 500px at 0% 110%, color-mix(in srgb, var(--accent2) 16%, transparent), transparent 60%);
+}
+
+/* ============ BASE ============ */
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:var(--font-m)}
+body.fs-s{--font-m:var(--font-s)}
+body.fs-l{--font-m:var(--font-l)}
+body{
+  font-family:"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",sans-serif;
+  background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden;
+  transition:background .4s ease,color .4s ease;
+}
+body::before{ /* capa de iluminación ambiental, detrás de todo */
+  content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:var(--bg-glow); transition:background .5s ease;
+}
+body.reduced *{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,select,textarea{font:inherit;color:var(--text)}
+img{max-width:100%;display:block}
+:focus-visible{outline:2px solid var(--accent2);outline-offset:2px;border-radius:6px}
+::selection{background:var(--accent);color:#fff}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ============ LAYOUT ============ */
+#fx{position:fixed;inset:0;z-index:1;pointer-events:none} /* partículas: capa visual, nunca bloquea UI */
+.app{position:relative;z-index:2;display:grid;grid-template-columns:var(--sidebar-w) 1fr;min-height:100vh}
+
+/* Sidebar (desktop) */
+.sidebar{
+  position:sticky;top:0;height:100vh;padding:22px 14px;display:flex;flex-direction:column;gap:6px;
+  background:color-mix(in srgb, var(--bg2) 82%, transparent);
+  border-right:1px solid var(--border);backdrop-filter:blur(14px);
+}
+.brand{display:flex;align-items:center;gap:10px;padding:6px 10px 20px;font-weight:800;font-size:1.15rem;letter-spacing:.5px}
+.brand .dot{width:34px;height:34px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:grid;place-items:center;font-size:1.1rem;box-shadow:0 4px 14px color-mix(in srgb,var(--accent) 45%,transparent)}
+.nav-btn{
+  display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px;border-radius:12px;
+  color:var(--muted);font-weight:600;text-align:left;transition:background .2s,color .2s,transform .15s;
+}
+.nav-btn .ico{width:26px;text-align:center;font-size:1.15rem}
+.nav-btn:hover{background:var(--card);color:var(--text);transform:translateX(3px)}
+.nav-btn.active{background:linear-gradient(120deg,color-mix(in srgb,var(--accent) 26%,transparent),transparent);
+  color:var(--text);box-shadow:inset 3px 0 0 var(--accent)}
+.sidebar .foot{margin-top:auto;font-size:.75rem;color:var(--muted);padding:8px 10px}
+
+/* Main */
+.main{padding:26px clamp(16px,4vw,44px) calc(var(--player-h) + 40px);max-width:1180px;width:100%;margin:0 auto}
+.view{display:none;animation:viewIn .35s ease both}
+.view.active{display:block}
+@keyframes viewIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.view-head{margin-bottom:22px}
+.view-head h1{font-size:clamp(1.4rem,3vw,2rem);font-weight:800}
+.view-head p{color:var(--muted);margin-top:4px}
+
+/* ============ COMPONENTES ============ */
+.card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:20px;backdrop-filter:blur(10px);box-shadow:var(--shadow);
+}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:10px 16px;border-radius:12px;font-weight:700;font-size:.95rem;
+  background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 70%,var(--accent2)));
+  color:#fff;box-shadow:0 4px 14px color-mix(in srgb,var(--accent) 35%,transparent);
+  transition:transform .15s,box-shadow .2s,filter .2s;
+}
+.btn:hover{transform:translateY(-2px);filter:brightness(1.08)}
+.btn:active{transform:translateY(0) scale(.98)}
+.btn.ghost{background:var(--card);color:var(--text);border:1px solid var(--border);box-shadow:none}
+.btn.ghost:hover{border-color:var(--accent)}
+.btn.small{padding:7px 12px;font-size:.85rem;border-radius:10px}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.icon-btn{
+  width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:1.1rem;
+  background:var(--card);border:1px solid var(--border);transition:transform .15s,border-color .2s;
+}
+.icon-btn:hover{transform:translateY(-2px);border-color:var(--accent)}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.field label{font-size:.85rem;font-weight:700;color:var(--muted)}
+.input,select.input,textarea.input{
+  background:color-mix(in srgb,var(--bg2) 70%,transparent);border:1px solid var(--border);
+  border-radius:12px;padding:10px 13px;width:100%;transition:border-color .2s;
+}
+.input:focus{border-color:var(--accent);outline:none}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:760px){.grid2{grid-template-columns:1fr}}
+.chip{
+  padding:8px 14px;border-radius:999px;border:1px solid var(--border);background:var(--card);
+  font-weight:600;font-size:.85rem;color:var(--muted);transition:all .2s;
+}
+.chip:hover{color:var(--text);border-color:var(--accent)}
+.chip.on{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-color:transparent}
+.progress{height:8px;border-radius:99px;background:color-mix(in srgb,var(--bg2) 80%,transparent);overflow:hidden}
+.progress>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s ease}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:.72rem;font-weight:800;letter-spacing:.6px;
+  padding:4px 10px;border-radius:999px;background:color-mix(in srgb,var(--accent) 22%,transparent);
+  color:var(--accent2);text-transform:uppercase}
+.hr{height:1px;background:var(--border);margin:18px 0}
+.muted{color:var(--muted)}
+.hidden{display:none!important}
+
+/* ============ DASHBOARD ============ */
+.hero{padding:34px 26px;border-radius:20px;margin-bottom:22px;position:relative;overflow:hidden;
+  background:linear-gradient(120deg,color-mix(in srgb,var(--accent) 22%,transparent),transparent 60%),var(--card);
+  border:1px solid var(--border)}
+.hero h1{font-size:clamp(1.5rem,3.5vw,2.3rem)}
+.hero p{color:var(--muted);margin-top:8px;max-width:56ch}
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px}
+.dash-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;
+  cursor:pointer;transition:transform .2s,box-shadow .25s,border-color .2s;position:relative;overflow:hidden;
+}
+.dash-card::after{content:"";position:absolute;inset:0;background:radial-gradient(300px 160px at var(--mx,50%) var(--my,0%),color-mix(in srgb,var(--accent) 18%,transparent),transparent 70%);opacity:0;transition:opacity .25s;pointer-events:none}
+.dash-card:hover{transform:translateY(-5px);box-shadow:var(--shadow);border-color:color-mix(in srgb,var(--accent) 55%,var(--border))}
+.dash-card:hover::after{opacity:1}
+.dash-card .big{font-size:2rem;margin-bottom:10px;display:inline-grid;place-items:center;width:54px;height:54px;border-radius:16px;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 30%,transparent),transparent);border:1px solid var(--border)}
+.dash-card h3{margin-bottom:6px}
+.dash-card p{color:var(--muted);font-size:.9rem;margin-bottom:14px}
+
+/* ============ ROMPECABEZAS ============ */
+.puzzle-wrap{display:grid;grid-template-columns:280px 1fr;gap:20px;align-items:start}
+@media(max-width:880px){.puzzle-wrap{grid-template-columns:1fr}}
+.pz-board{
+  width:min(100%,520px);aspect-ratio:1;display:grid;gap:4px;margin:0 auto;touch-action:manipulation;
+}
+.pz-tile{
+  border-radius:8px;background-repeat:no-repeat;border:1px solid var(--border);
+  transition:transform .12s,box-shadow .2s;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15);
+}
+.pz-tile:hover{transform:scale(1.04);box-shadow:0 4px 12px rgba(0,0,0,.4);z-index:2;position:relative}
+.pz-tile.empty{background:transparent;border-style:dashed;opacity:.35;box-shadow:none;pointer-events:none}
+.pz-stats{display:flex;gap:18px;flex-wrap:wrap;margin:12px 0;font-variant-numeric:tabular-nums}
+.pz-stats b{font-size:1.25rem;color:var(--accent2)}
+.thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.thumbs button{border-radius:10px;overflow:hidden;border:2px solid transparent;aspect-ratio:1;transition:border-color .2s,transform .15s}
+.thumbs button:hover{transform:scale(1.05)}
+.thumbs button.sel{border-color:var(--accent)}
+.thumbs canvas{width:100%;height:100%}
+
+/* ============ FRASES ============ */
+.quote-card{max-width:640px;margin:0 auto;text-align:center;padding:40px 28px;position:relative}
+.quote-card .qmark{font-size:3rem;color:var(--accent);opacity:.6;line-height:1}
+.quote-card blockquote{font-size:clamp(1.15rem,2.6vw,1.55rem);font-weight:600;line-height:1.5;margin:14px 0}
+.quote-card .author{color:var(--muted);font-style:italic}
+.fav-btn.on{color:#fbbf24;border-color:#fbbf24}
+
+/* ============ AUDIOBOOK ============ */
+.ab-layout{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:880px){.ab-layout{grid-template-columns:1fr}}
+.ab-page{aspect-ratio:1/1.2;background:var(--bg2);border-radius:12px;display:grid;place-items:center;overflow:hidden;border:1px solid var(--border)}
+.ab-page canvas{max-width:100%;max-height:100%}
+.ab-text{max-height:420px;overflow-y:auto;white-space:pre-wrap;line-height:1.7;padding-right:6px}
+.ab-text .hl{background:color-mix(in srgb,var(--accent2) 30%,transparent);border-radius:4px;padding:0 3px}
+.tts-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
+select.input{width:auto}
+
+/* ============ IDIOMAS ============ */
+.chat{display:flex;flex-direction:column;gap:12px;max-height:440px;overflow-y:auto;padding:6px 2px}
+.msg{max-width:82%;padding:11px 15px;border-radius:16px;line-height:1.5;animation:viewIn .25s ease both}
+.msg.ai{align-self:flex-start;background:var(--card);border:1px solid var(--border);border-bottom-left-radius:4px}
+.msg.me{align-self:flex-end;background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 70%,var(--accent2)));color:#fff;border-bottom-right-radius:4px}
+.msg .mini{display:block;margin-top:8px;font-size:.78rem;opacity:.75}
+.chat-bar{display:flex;gap:8px;margin-top:14px}
+.chat-bar .input{flex:1}
+
+/* ============ AMBIENTE ============ */
+.mixer{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px}
+.channel{display:flex;flex-direction:column;align-items:center;gap:10px;padding:16px 10px;text-align:center}
+.channel .cico{font-size:1.6rem}
+.channel input[type=range]{width:100%;accent-color:var(--accent)}
+.channel .cname{font-weight:700;font-size:.9rem}
+.presets{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+
+/* ============ MÚSICA / YOUTUBE ============ */
+.playlist{list-style:none;display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto}
+.playlist li{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;cursor:pointer;border:1px solid transparent;color:var(--muted)}
+.playlist li:hover{background:var(--card)}
+.playlist li.on{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--text);border-color:var(--accent)}
+.yt-frame{width:100%;aspect-ratio:16/9;border:0;border-radius:14px;background:#000}
+
+/* ============ PLAYER GLOBAL ============ */
+.player{
+  position:fixed;left:calc(var(--sidebar-w) + 16px);right:16px;bottom:12px;z-index:50;
+  display:flex;align-items:center;gap:12px;padding:10px 16px;border-radius:16px;
+  background:color-mix(in srgb,var(--bg2) 88%,transparent);border:1px solid var(--border);
+  backdrop-filter:blur(16px);box-shadow:var(--shadow);
+}
+.player .p-info{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:.9rem}
+.player input[type=range]{width:110px;accent-color:var(--accent)}
+@media(max-width:820px){
+  .player{left:12px;right:12px;bottom:calc(66px + env(safe-area-inset-bottom));flex-wrap:wrap}
+  .player input[type=range]{width:80px}
+}
+
+/* ============ NAV MÓVIL ============ */
+.mnav{
+  display:none;position:fixed;left:0;right:0;bottom:0;z-index:60;
+  background:color-mix(in srgb,var(--bg2) 92%,transparent);border-top:1px solid var(--border);
+  backdrop-filter:blur(16px);padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+  grid-template-columns:repeat(6,1fr);
+}
+.mnav button{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.62rem;font-weight:700;color:var(--muted);padding:6px 2px;border-radius:10px}
+.mnav button .ico{font-size:1.15rem}
+.mnav button.active{color:var(--accent2)}
+@media(max-width:820px){
+  .app{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .mnav{display:grid}
+  .main{padding-bottom:calc(var(--player-h) + 96px)}
+}
+
+/* ============ TOASTS / MODALES ============ */
+#toasts{position:fixed;top:16px;right:16px;z-index:100;display:flex;flex-direction:column;gap:8px;max-width:min(92vw,340px)}
+.toast{
+  background:color-mix(in srgb,var(--bg2) 92%,transparent);border:1px solid var(--border);
+  border-left:3px solid var(--accent2);border-radius:12px;padding:11px 15px;font-size:.9rem;font-weight:600;
+  backdrop-filter:blur(12px);box-shadow:var(--shadow);animation:toastIn .3s ease both;
+}
+@keyframes toastIn{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
+.toast.out{animation:toastOut .3s ease both}
+@keyframes toastOut{to{opacity:0;transform:translateX(24px)}}
+.modal-veil{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);
+  display:grid;place-items:center;padding:18px;animation:viewIn .25s ease both}
+.modal{width:min(560px,100%);max-height:88vh;overflow-y:auto}
+.theme-pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
+.theme-pick button{border-radius:14px;padding:14px 8px;font-weight:700;font-size:.82rem;border:2px solid var(--border);transition:transform .15s,border-color .2s}
+.theme-pick button:hover{transform:translateY(-3px)}
+.theme-pick button.sel{border-color:var(--accent)}
+.tp-dot{width:100%;height:34px;border-radius:9px;margin-bottom:8px}
+
+/* ============ CONFETI / SKELETON ============ */
+#confetti{position:fixed;inset:0;z-index:150;pointer-events:none}
+.skel{border-radius:12px;background:linear-gradient(100deg,var(--card) 40%,color-mix(in srgb,var(--card) 60%,#fff 6%) 50%,var(--card) 60%);background-size:200% 100%;animation:skel 1.2s infinite linear}
+@keyframes skel{to{background-position:-200% 0}}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* ============ DRAGONCITA LUMINOSA (SVG) ============ */
+#dragon{position:fixed;left:0;top:0;width:92px;height:78px;z-index:95;cursor:pointer;
+  pointer-events:auto;will-change:transform;filter:drop-shadow(0 10px 18px rgba(120,200,240,.38))}
+#dragon .d-in{position:relative;width:100%;height:100%;animation:dbob 3.2s ease-in-out infinite}
+@keyframes dbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.d-aura{position:absolute;inset:-20px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(190,242,255,.5),rgba(140,230,255,.14) 55%,transparent 70%);
+  animation:dpulse 3s ease-in-out infinite}
+@keyframes dpulse{0%,100%{opacity:.7;transform:scale(1)}50%{opacity:1;transform:scale(1.12)}}
+.d-svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.d-wing-front{transform-box:fill-box;transform-origin:right center;animation:dflapF .48s ease-in-out infinite alternate}
+.d-wing-back{transform-box:fill-box;transform-origin:right center;animation:dflapB .48s ease-in-out infinite alternate;animation-delay:-.24s}
+@keyframes dflapF{from{transform:rotate(-10deg)}to{transform:rotate(8deg)}}
+@keyframes dflapB{from{transform:rotate(8deg)}to{transform:rotate(-6deg)}}
+.d-tail-svg{transform-box:fill-box;transform-origin:right center;animation:dswish 2.6s ease-in-out infinite}
+@keyframes dswish{0%,100%{transform:rotate(2deg)}50%{transform:rotate(-3deg)}}
+.d-eye-svg{transform-box:fill-box;transform-origin:center;animation:dblinkSvg 5.2s infinite}
+@keyframes dblinkSvg{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.07)}}
+.d-sparks i{position:absolute;width:4px;height:4px;background:#bff7ff;border-radius:50%;
+  box-shadow:0 0 7px #7ff3ff;animation:dorbit 4s ease-in-out infinite}
+.d-sparks i:nth-child(1){left:-6px;top:26px}
+.d-sparks i:nth-child(2){right:-10px;top:2px;animation-delay:-1.4s}
+.d-sparks i:nth-child(3){left:40px;top:-14px;animation-delay:-2.7s}
+@keyframes dorbit{0%,100%{transform:translateY(0);opacity:.25}50%{transform:translateY(-9px);opacity:1}}
+.d-heart{position:fixed;z-index:97;font-size:1.05rem;pointer-events:none;animation:dheart 1.25s ease-out forwards}
+@keyframes dheart{0%{opacity:1;transform:translate(0,0) scale(.6)}100%{opacity:0;transform:translate(var(--hx),-75px) scale(1.35) rotate(14deg)}}
+.d-bubble{position:fixed;z-index:96;max-width:230px;background:color-mix(in srgb,var(--card-solid) 94%,transparent);
+  border:1px solid var(--border);border-radius:14px;padding:9px 14px;font-size:.85rem;font-weight:600;
+  box-shadow:var(--shadow);opacity:0;transform:translateY(8px) scale(.92);transition:opacity .3s,transform .3s;
+  pointer-events:none}
+.d-bubble.show{opacity:1;transform:none}
+.d-bubble::after{content:"";position:absolute;left:24px;bottom:-7px;width:12px;height:12px;
+  background:inherit;border-right:1px solid var(--border);border-bottom:1px solid var(--border);transform:rotate(45deg)}
+@media(max-width:820px){#dragon{width:76px;height:64px}}
+</style>
+</head>
+<body data-theme="luna">
+<canvas id="fx" aria-hidden="true"></canvas>
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<div class="app">
+  <!-- ============ SIDEBAR (desktop) ============ -->
+  <aside class="sidebar" aria-label="Navegación principal">
+    <div class="brand"><span class="dot">🌙</span> Refugio</div>
+    <button class="nav-btn active" data-go="dashboard"><span class="ico">🏠</span> Inicio</button>
+    <button class="nav-btn" data-go="puzzle"><span class="ico">🧩</span> Rompecabezas</button>
+    <button class="nav-btn" data-go="phrases"><span class="ico">💬</span> Frases</button>
+    <button class="nav-btn" data-go="audiobook"><span class="ico">📖</span> Audiobook</button>
+    <button class="nav-btn" data-go="langs"><span class="ico">🗣️</span> Idiomas</button>
+    <button class="nav-btn" data-go="ambient"><span class="ico">🎧</span> Ambiente</button>
+    <button class="nav-btn" data-go="music"><span class="ico">🎵</span> Música</button>
+    <button class="nav-btn" data-go="settings"><span class="ico">⚙️</span> Configuración</button>
+    <div class="foot">v1.0 · Demo Mode<br>Sin cuentas, sin claves.</div>
+  </aside>
+
+  <!-- ============ CONTENIDO ============ -->
+  <main class="main" id="main">
+
+    <!-- ===== DASHBOARD ===== -->
+    <section class="view active" id="view-dashboard" aria-label="Inicio">
+      <div class="hero">
+        <span class="badge">✨ Tu espacio personal</span>
+        <h1 id="greeting">Bienvenido</h1>
+        <p>Rompecabezas, frases que abrazan, audiolibros, práctica de idiomas y ambientes sonoros. Todo en un solo refugio.</p>
+        <p id="petLine" class="muted" style="font-size:.85rem;margin-top:10px">🐉✨ Tu dragoncita luminosa vuela por aquí… acaríciala cuando pase.</p>
+        <div class="row" style="margin-top:16px">
+          <button class="btn" data-go="puzzle">Empezar a jugar 🧩</button>
+          <button class="btn ghost" data-go="ambient">Crear ambiente 🎧</button>
+        </div>
+      </div>
+      <div class="dash-grid" id="dashGrid"></div>
+    </section>
+
+    <!-- ===== ROMPECABEZAS ===== -->
+    <section class="view" id="view-puzzle" aria-label="Rompecabezas">
+      <div class="view-head"><h1>🧩 Rompecabezas</h1><p>Pon a prueba tu mente. Arrastra o toca las piezas para ordenarlas.</p></div>
+      <div class="puzzle-wrap">
+        <div class="card">
+          <div class="field"><label for="pz-diff">Dificultad</label>
+            <select id="pz-diff" class="input">
+              <option value="3">Fácil · 9 piezas</option>
+              <option value="4" selected>Normal · 16 piezas</option>
+              <option value="5">Difícil · 25 piezas</option>
+              <option value="6">Experto · 36 piezas</option>
+              <option value="custom">Personalizado</option>
+            </select>
+          </div>
+          <div class="field hidden" id="pz-custom-wrap"><label for="pz-custom">Piezas por lado (3–8)</label>
+            <input id="pz-custom" class="input" type="number" min="3" max="8" value="4">
+          </div>
+          <div class="field"><label>Imagen</label>
+            <div class="thumbs" id="pz-thumbs"></div>
+          </div>
+          <div class="field"><label for="pz-url">O introduce una URL de imagen</label>
+            <div class="row"><input id="pz-url" class="input" placeholder="https://…" inputmode="url">
+            <button class="btn small" id="pz-url-go">Cargar</button></div>
+          </div>
+          <div class="field"><label for="pz-file">O sube una imagen local</label>
+            <input id="pz-file" class="input" type="file" accept="image/*">
+          </div>
+          <div class="row">
+            <button class="btn" id="pz-start">▶ Iniciar</button>
+            <button class="btn ghost" id="pz-shuffle">🔀 Mezclar</button>
+          </div>
+          <div class="hr"></div>
+          <div class="pz-stats">
+            <div>⏱ Tiempo<br><b id="pz-time">00:00</b></div>
+            <div>👆 Movimientos<br><b id="pz-moves">0</b></div>
+            <div>🎯 Progreso<br><b id="pz-prog">0%</b></div>
+          </div>
+          <div class="progress" aria-label="Progreso del rompecabezas"><i id="pz-bar"></i></div>
+          <p class="muted" style="margin-top:12px;font-size:.85rem">Mejor tiempo: <b id="pz-best">—</b></p>
+        </div>
+        <div class="card">
+          <div class="pz-board" id="pz-board" role="grid" aria-label="Tablero del rompecabezas"></div>
+          <p class="muted" style="text-align:center;margin-top:12px;font-size:.85rem">Toca una pieza junto al espacio vacío, o usa las flechas del teclado.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== FRASES ===== -->
+    <section class="view" id="view-phrases" aria-label="Frases">
+      <div class="view-head"><h1>💬 Frases</h1><p>Una palabra también puede abrazar.</p></div>
+      <div class="row" id="ph-cats" style="margin-bottom:20px" role="tablist" aria-label="Categorías"></div>
+      <div class="card quote-card" id="ph-card">
+        <div class="qmark">“</div>
+        <blockquote id="ph-text">…</blockquote>
+        <p class="author" id="ph-author"></p>
+        <p style="margin-top:6px"><span class="badge" id="ph-cat">—</span></p>
+        <div class="row" style="justify-content:center;margin-top:20px">
+          <button class="icon-btn" id="ph-prev" title="Anterior" aria-label="Frase anterior">⬅️</button>
+          <button class="icon-btn" id="ph-next" title="Nueva frase" aria-label="Nueva frase">🎲</button>
+          <button class="icon-btn fav-btn" id="ph-fav" title="Guardar favorita" aria-label="Guardar en favoritas">⭐</button>
+          <button class="icon-btn" id="ph-copy" title="Copiar" aria-label="Copiar frase">📋</button>
+          <button class="icon-btn" id="ph-share" title="Compartir" aria-label="Compartir frase">📤</button>
+          <button class="icon-btn" id="ph-speak" title="Escuchar" aria-label="Escuchar frase">🔊</button>
+        </div>
+      </div>
+      <div class="card" style="max-width:640px;margin:18px auto 0">
+        <h3 style="margin-bottom:10px">⭐ Favoritas</h3>
+        <ul class="playlist" id="ph-favs"><li class="muted">Aún no guardas frases.</li></ul>
+      </div>
+    </section>
+
+    <!-- ===== AUDIOBOOK ===== -->
+    <section class="view" id="view-audiobook" aria-label="Audiobook">
+      <div class="view-head"><h1>📖 Audiobook</h1><p>Convierte tus documentos en historias. El PDF se lee en voz alta con TTS del navegador.</p></div>
+      <div class="card" style="margin-bottom:18px">
+        <div class="row">
+          <input id="ab-file" type="file" accept="application/pdf" class="input" style="max-width:340px">
+          <button class="btn ghost small" id="ab-demo">Cargar texto de ejemplo</button>
+        </div>
+        <p class="muted" style="font-size:.85rem;margin-top:10px">Nota: los PDF escaneados (imágenes sin texto) requieren OCR y no se pueden leer con TTS.</p>
+      </div>
+      <div class="card" style="margin-bottom:18px">
+        <h3 style="margin-bottom:6px">📚 Catálogo de dominio público</h3>
+        <p class="muted" style="font-size:.85rem;margin-bottom:12px">Miles de libros gratuitos y legales: Project Gutenberg y Archive.org. Busca, elige y escúchalos al instante.</p>
+        <div class="row" style="margin-bottom:10px">
+          <select id="cat-src" class="input" style="max-width:210px" aria-label="Fuente del catálogo">
+            <option value="all" selected>🔎 Todas las fuentes</option>
+            <option value="gutendex">Project Gutenberg</option>
+            <option value="archive">Archive.org</option>
+            <option value="openlib">Open Library</option>
+            <option value="wikisource">Wikisource (es)</option>
+          </select>
+          <input id="cat-q" class="input" placeholder="Buscar título o autor…" style="flex:1;min-width:170px" autocomplete="off">
+          <button class="btn small" id="cat-go">Buscar</button>
+        </div>
+        <div class="presets" id="cat-featured"></div>
+        <ul class="playlist" id="cat-results"><li class="muted">Busca un libro o elige un destacado.</li></ul>
+      </div>
+      <div class="ab-layout">
+        <div>
+          <div class="card">
+            <div class="ab-page" id="ab-page"><p class="muted" style="padding:20px">Carga un PDF para ver sus páginas.</p></div>
+            <div class="tts-controls">
+              <button class="icon-btn" id="ab-prev-p" title="Página anterior" aria-label="Página anterior">⏮</button>
+              <span id="ab-pageno" class="muted">— / —</span>
+              <button class="icon-btn" id="ab-next-p" title="Página siguiente" aria-label="Página siguiente">⏭</button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <h3 style="margin-bottom:10px">🔊 Narración</h3>
+            <div class="tts-controls" style="margin:0 0 14px">
+              <button class="btn small" id="ab-play">▶ Reproducir</button>
+              <button class="btn ghost small" id="ab-pause">⏸ Pausar</button>
+              <button class="btn ghost small" id="ab-stop">⏹ Detener</button>
+            </div>
+            <div class="row" style="margin-bottom:14px">
+              <label class="muted" for="ab-rate">Velocidad</label>
+              <select id="ab-rate" class="input">
+                <option value="0.75">0.75x</option><option value="1" selected>1x</option>
+                <option value="1.25">1.25x</option><option value="1.5">1.5x</option>
+                <option value="1.75">1.75x</option><option value="2">2x</option>
+              </select>
+              <label class="muted" for="ab-voice">Voz</label>
+              <select id="ab-voice" class="input"><option value="">Predeterminada</option></select>
+            </div>
+            <div class="progress" aria-label="Progreso de lectura"><i id="ab-bar"></i></div>
+            <div class="ab-text card" id="ab-text" style="margin-top:14px;box-shadow:none;background:color-mix(in srgb,var(--bg2) 50%,transparent)"><p class="muted">El texto del documento aparecerá aquí.</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== IDIOMAS ===== -->
+    <section class="view" id="view-langs" aria-label="Idiomas con IA">
+      <div class="view-head"><h1>🗣️ Idiomas</h1><p>Habla. Practica. Aprende. Arquitectura AIProvider preparada para conectar OpenAI, Gemini o Claude.</p></div>
+      <div class="card" style="margin-bottom:16px">
+        <span class="badge">🧪 Modo Demo · IA local simulada</span>
+        <div class="row" style="margin-top:14px">
+          <select id="ln-lang" class="input" aria-label="Idioma">
+            <option value="es">Español</option><option value="en" selected>Inglés</option>
+            <option value="fr">Français</option><option value="pt">Português</option>
+            <option value="it">Italiano</option><option value="de">Deutsch</option>
+          </select>
+          <select id="ln-level" class="input" aria-label="Nivel">
+            <option value="A1">A1</option><option value="A2" selected>A2</option>
+            <option value="B1">B1</option><option value="B2">B2</option><option value="C1">C1</option>
+          </select>
+          <select id="ln-scenario" class="input" aria-label="Escenario">
+            <option value="daily" selected>Cotidiano</option><option value="restaurant">Restaurante</option>
+            <option value="airport">Aeropuerto</option><option value="interview">Entrevista</option>
+            <option value="travel">Viaje</option><option value="shopping">Compras</option>
+          </select>
+          <select id="ln-mode" class="input" aria-label="Modo">
+            <option value="chat" selected>💬 Conversación natural</option>
+            <option value="teacher">🎓 Profesor (con correcciones)</option>
+          </select>
+          <button class="btn ghost small" id="ln-reset">↺ Nueva conversación</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="chat" id="ln-chat" aria-live="polite"></div>
+        <div class="chat-bar">
+          <button class="icon-btn" id="ln-mic" title="Hablar (micrófono)" aria-label="Hablar con el micrófono">🎙️</button>
+          <input id="ln-input" class="input" placeholder="Escribe algo para practicar…" autocomplete="off">
+          <button class="btn" id="ln-send">Enviar</button>
+        </div>
+        <p class="muted" style="font-size:.8rem;margin-top:10px">Para IA real, configura un proveedor en Configuración (requiere backend proxy para no exponer claves).</p>
+      </div>
+    </section>
+
+    <!-- ===== AMBIENTE ===== -->
+    <section class="view" id="view-ambient" aria-label="Ambiente">
+      <div class="view-head"><h1>🎧 Ambiente</h1><p>Crea tu propio espacio. Mesa de mezclas de sonidos generados en tu navegador (sin archivos externos).</p></div>
+      <div class="card" style="margin-bottom:18px">
+        <h3 style="margin-bottom:4px">Presets</h3>
+        <div class="presets" id="amb-presets"></div>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:14px">🎚️ Mesa de mezclas</h3>
+        <div class="mixer" id="amb-mixer"></div>
+        <div class="row" style="margin-top:16px">
+          <button class="btn ghost small" id="amb-stop">⏹ Detener todo</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== MÚSICA ===== -->
+    <section class="view" id="view-music" aria-label="Música">
+      <div class="view-head"><h1>🎵 Música</h1><p>Tu música local y videos de YouTube, en mecanismos oficiales permitidos.</p></div>
+      <div class="grid2">
+        <div class="card">
+          <h3 style="margin-bottom:12px">📁 Mi música</h3>
+          <input id="mu-files" type="file" accept="audio/*" multiple class="input" style="margin-bottom:12px">
+          <ul class="playlist" id="mu-list"><li class="muted">Añade archivos de audio de tu dispositivo.</li></ul>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom:12px">📺 YouTube</h3>
+          <p class="muted" style="font-size:.85rem;margin-bottom:12px">Pega el enlace de un video para reproducirlo con el reproductor oficial embebido. No descargamos ni extraemos contenido.</p>
+          <div class="row">
+            <input id="yt-url" class="input" placeholder="https://youtube.com/watch?v=…" inputmode="url">
+            <button class="btn small" id="yt-go">Reproducir</button>
+          </div>
+          <div id="yt-box" style="margin-top:14px"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== CONFIGURACIÓN ===== -->
+    <section class="view" id="view-settings" aria-label="Configuración">
+      <div class="view-head"><h1>⚙️ Configuración</h1><p>Tu refugio, a tu manera. Todo se guarda localmente en tu navegador.</p></div>
+      <div class="grid2">
+        <div class="card">
+          <h3 style="margin-bottom:14px">🎨 Apariencia</h3>
+          <div class="field"><label>Tema</label>
+            <div class="theme-pick" id="set-themes"></div>
+          </div>
+          <div class="field"><label for="set-accent">Color de acento (tema personalizado)</label>
+            <input type="color" id="set-accent" class="input" style="padding:4px;height:46px">
+          </div>
+          <div class="field"><label for="set-fs">Tamaño de texto</label>
+            <select id="set-fs" class="input"><option value="s">Pequeño</option><option value="m" selected>Mediano</option><option value="l">Grande</option></select>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom:14px">✨ Efectos</h3>
+          <div class="field"><label for="set-particles">Partículas de fondo</label>
+            <select id="set-particles" class="input"><option value="on" selected>Activadas</option><option value="off">Desactivadas</option></select>
+          </div>
+          <div class="field"><label for="set-pint">Intensidad de partículas</label>
+            <select id="set-pint" class="input"><option value="baja">Baja</option><option value="media" selected>Media</option><option value="alta">Alta</option></select>
+          </div>
+          <div class="field"><label for="set-motion">Animaciones</label>
+            <select id="set-motion" class="input"><option value="full" selected>Completas</option><option value="reduced">Reducidas (respeta prefers-reduced-motion)</option></select>
+          </div>
+          <div class="hr"></div>
+          <button class="btn ghost" id="set-reset">🗑 Restablecer configuración</button>
+          <p class="muted" style="font-size:.8rem;margin-top:12px">Persistencia: localStorage. Arquitectura preparada para migrar a Firebase/Supabase sin cambiar los módulos.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ============ NAV INFERIOR (móvil) ============ -->
+<nav class="mnav" aria-label="Navegación móvil">
+  <button data-go="dashboard" class="active"><span class="ico">🏠</span>Inicio</button>
+  <button data-go="puzzle"><span class="ico">🧩</span>Jugar</button>
+  <button data-go="phrases"><span class="ico">💬</span>Frases</button>
+  <button data-go="ambient"><span class="ico">🎧</span>Ambiente</button>
+  <button data-go="music"><span class="ico">🎵</span>Música</button>
+  <button data-go="settings"><span class="ico">⚙️</span>Ajustes</button>
+</nav>
+
+<!-- ============ REPRODUCTOR GLOBAL ============ -->
+<div class="player hidden" id="player" role="region" aria-label="Reproductor de música">
+  <button class="icon-btn" id="pl-prev" title="Anterior" aria-label="Pista anterior">⏮</button>
+  <button class="btn small" id="pl-play" aria-label="Reproducir o pausar">▶</button>
+  <button class="icon-btn" id="pl-next" title="Siguiente" aria-label="Pista siguiente">⏭</button>
+  <span class="p-info" id="pl-info">—</span>
+  <span class="muted" id="pl-time" style="font-size:.8rem;font-variant-numeric:tabular-nums">0:00/0:00</span>
+  <input type="range" id="pl-seek" min="0" max="1000" value="0" aria-label="Progreso">
+  <button class="icon-btn" id="pl-loop" title="Repetir" aria-label="Repetir lista">🔁</button>
+  <input type="range" id="pl-vol" min="0" max="100" value="80" aria-label="Volumen">
+</div>
+
+<!-- ============ DRAGONCITA LUMINOSA (mascota viva) ============ -->
+<div id="dragon" role="img" aria-label="Dragoncita luminosa, mascota del refugio" title="Acaríciame ♥">
+  <div class="d-in">
+    <div class="d-aura"></div>
+    <svg class="d-svg" viewBox="0 0 150 120" aria-hidden="true">
+      <defs>
+        <radialGradient id="dEye" cx="42%" cy="34%" r="78%">
+          <stop offset="0%" stop-color="#cdf3ff"/><stop offset="45%" stop-color="#54bef2"/>
+          <stop offset="100%" stop-color="#2b8fc4"/>
+        </radialGradient>
+        <linearGradient id="dBody" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ffffff"/><stop offset="68%" stop-color="#f2f9ff"/>
+          <stop offset="100%" stop-color="#dcebf7"/>
+        </linearGradient>
+        <linearGradient id="dWing" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#f6fcff"/><stop offset="100%" stop-color="#c8e4f6"/>
+        </linearGradient>
+        <linearGradient id="dFin" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#e9f6ff"/><stop offset="100%" stop-color="#b5dcf2"/>
+        </linearGradient>
+      </defs>
+      <!-- cola con aletas gemelas -->
+      <g class="d-tail-svg">
+        <path d="M50 60 C 38 62, 24 68, 12 78 C 26 74, 40 70, 52 70 Z" fill="url(#dBody)"/>
+        <path d="M16 72 C 6 60, 6 46, 16 36 C 14 50, 18 60, 26 68 Z" fill="url(#dFin)" opacity=".95"/>
+        <path d="M16 80 C 6 92, 8 104, 18 112 C 14 98, 18 88, 26 82 Z" fill="url(#dFin)" opacity=".95"/>
+      </g>
+      <!-- ala trasera -->
+      <g class="d-wing-back">
+        <path d="M74 58 L32 80 Q40 84 47 82 L38 96 Q58 90 76 68 Z" fill="url(#dWing)" opacity=".78" stroke="#b9dcf0" stroke-width="1"/>
+        <path d="M74 58 L32 80 M74 58 L38 96" stroke="#cfe6f5" stroke-width="1.3" fill="none"/>
+      </g>
+      <!-- cuerpo -->
+      <path d="M46 66 C 50 50, 68 42, 92 42 C 110 42, 124 48, 130 56 C 128 68, 114 76, 94 76 C 74 76, 54 74, 46 66 Z" fill="url(#dBody)"/>
+      <path d="M58 72 C 78 78, 108 74, 124 60 C 118 74, 96 81, 74 78 C 64 77, 58 75, 58 72 Z" fill="#d8ecfa"/>
+      <ellipse cx="86" cy="77" rx="6.5" ry="3.8" fill="#eef7fd"/>
+      <ellipse cx="68" cy="76" rx="5.5" ry="3.4" fill="#eef7fd"/>
+      <!-- cabeza -->
+      <path d="M94 44 C 94 30, 106 20, 120 20 C 134 20, 142 30, 142 42 C 142 54, 132 62, 118 62 C 104 62, 94 56, 94 44 Z" fill="url(#dBody)"/>
+      <path d="M106 24 C 102 14, 105 7, 112 6 C 113 13, 112 19, 109 24 Z" fill="#fbfeff"/>
+      <path d="M124 22 C 122 12, 126 6, 133 6 C 134 13, 132 18, 128 22 Z" fill="#fbfeff"/>
+      <ellipse cx="103" cy="50" rx="4" ry="2.4" fill="#ffd3e4" opacity=".55"/>
+      <!-- ojo grande turquesa -->
+      <g class="d-eye-svg">
+        <ellipse cx="121" cy="39.5" rx="11.5" ry="12.5" fill="url(#dEye)"/>
+        <ellipse cx="124" cy="41.5" rx="5" ry="6" fill="#072530"/>
+        <circle cx="115.5" cy="35.5" r="2.7" fill="#fff"/>
+        <circle cx="127" cy="46" r="1.4" fill="#fff" opacity=".9"/>
+      </g>
+      <circle cx="136" cy="44" r="1.2" fill="#c7d9e6"/>
+      <path d="M128 52 q 5 3 9 0" stroke="#9db4c6" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+      <!-- ala principal -->
+      <g class="d-wing-front">
+        <path d="M88 50 L40 16 Q47 26 50 30 L30 32 Q39 40 45 44 L34 52 Q60 62 88 60 Z" fill="url(#dWing)" opacity=".96" stroke="#b9dcf0" stroke-width="1"/>
+        <path d="M88 50 L40 16 M88 50 L30 32 M88 50 L34 52" stroke="#cfe6f5" stroke-width="1.4" fill="none"/>
+      </g>
+    </svg>
+    <div class="d-sparks"><i></i><i></i><i></i></div>
+  </div>
+</div>
+<div id="dbubble" class="d-bubble" role="status"></div>
+
+<div id="toasts" aria-live="polite"></div>
+<audio id="pl-audio" preload="metadata"></audio>
+
+<!-- pdf.js v3 (CDN) — necesario para extraer texto de PDF. Sin conexión, el módulo muestra error amigable. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+}
+</script>
+<script>
+
+/* ############################################################
+   NÚCLEO: StorageManager · Router · Toasts · Partículas · UI
+   ############################################################ */
+
+/* StorageManager — persistencia local. Intercambiable por un
+   backend (Firebase/Supabase) implementando la misma interfaz. */
+const Store = {
+  key: "refugio_v1",
+  data: {
+    theme:"luna", accent:"#8b7cf6", particles:true, pInt:"media",
+    reduced:false, fs:"m", lastView:"dashboard", favs:[], bestTime:null,
+    onboarded:false
+  },
+  load(){ try{ Object.assign(this.data, JSON.parse(localStorage.getItem(this.key)) || {}); }catch(e){ console.warn("Store corrupto, usando defaults", e); } },
+  save(){ try{ localStorage.setItem(this.key, JSON.stringify(this.data)); }catch(e){ toast("⚠️ No se pudo guardar en localStorage"); } },
+  reset(){ localStorage.removeItem(this.key); location.reload(); }
+};
+
+/* Toast — notificación breve no intrusiva */
+function toast(msg){
+  const box = document.getElementById("toasts");
+  const el = document.createElement("div");
+  el.className = "toast"; el.textContent = msg;
+  box.appendChild(el);
+  setTimeout(()=>{ el.classList.add("out"); setTimeout(()=>el.remove(), 320); }, 2600);
+}
+
+/* Router — muestra una vista y guarda la última sección */
+function go(view){
+  document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id === "view-"+view));
+  document.querySelectorAll("[data-go]").forEach(b => b.classList.toggle("active", b.dataset.go === view));
+  Store.data.lastView = view; Store.save();
+  const sec = document.getElementById("view-"+view);
+  const h = sec && sec.querySelector("h1"); if (h) { h.setAttribute("tabindex","-1"); h.focus({preventScroll:true}); }
+  if (Dragon.ready) Dragon.onView(view);
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-go]");
+  if (b) go(b.dataset.go);
+});
+
+/* Saludo dinámico según hora del día */
+(function greeting(){
+  const h = new Date().getHours();
+  const g = h < 7 ? "Buenas noches" : h < 13 ? "Buenos días" : h < 20 ? "Buenas tardes" : "Buenas noches";
+  document.getElementById("greeting").textContent = g + " ✨";
+})();
+
+/* ---------- Sistema de partículas (capa visual independiente) ----------
+   Canvas a pantalla completa con pointer-events:none: nunca bloquea
+   botones. Densidad reducida automáticamente en móviles y según
+   intensidad configurada. Se pausa con la pestaña oculta. */
+const Particles = {
+  cv:null, cx:null, ps:[], raf:null, mx:-999, my:-999,
+  init(){
+    this.cv = document.getElementById("fx");
+    this.cx = this.cv.getContext("2d");
+    const onResize = () => { this.cv.width = innerWidth; this.cv.height = innerHeight; this.build(); };
+    addEventListener("resize", onResize); onResize();
+    addEventListener("pointermove", e => { this.mx = e.clientX; this.my = e.clientY; }, {passive:true});
+    document.addEventListener("visibilitychange", () => document.hidden ? this.stop() : this.start());
+    this.start();
+  },
+  count(){ // densidad: móvil ≈ mitad; escala por intensidad
+    const base = matchMedia("(max-width:820px)").matches ? 34 : 70;
+    return Math.round(base * ({baja:.45, media:1, alta:1.8}[Store.data.pInt] || 1));
+  },
+  build(){
+    if (!this.cv || !this.cx) return; // init() aún no ejecutado (applyTheme lo llama antes)
+    const n = (Store.data.particles && !Store.data.reduced) ? this.count() : 0;
+    this.ps = Array.from({length:n}, () => ({
+      x: Math.random()*this.cv.width, y: Math.random()*this.cv.height,
+      r: Math.random()*2.2+0.6, vy: -(Math.random()*.35+.08), vx:(Math.random()-.5)*.15,
+      a: Math.random()*.5+.15, tw: Math.random()*Math.PI*2
+    }));
+  },
+  start(){ if (this.raf) return; const loop = () => { this.step(); this.raf = requestAnimationFrame(loop); }; loop(); },
+  stop(){ cancelAnimationFrame(this.raf); this.raf = null; },
+  step(){
+    const c = this.cx, accent = getComputedStyle(document.body).getPropertyValue("--accent").trim() || "#8b7cf6";
+    c.clearRect(0,0,this.cv.width,this.cv.height);
+    for (const p of this.ps){
+      p.y += p.vy; p.x += p.vx; p.tw += .02;
+      // interacción suave con el puntero
+      const dx = p.x-this.mx, dy = p.y-this.my, d = dx*dx+dy*dy;
+      if (d < 10000){ p.x += dx*.012; p.y += dy*.012; }
+      if (p.y < -6){ p.y = this.cv.height+6; p.x = Math.random()*this.cv.width; }
+      const alpha = p.a * (0.6 + 0.4*Math.sin(p.tw));
+      c.globalAlpha = alpha; c.fillStyle = accent;
+      c.beginPath(); c.arc(p.x, p.y, p.r, 0, 7); c.fill();
+    }
+    c.globalAlpha = 1;
+  }
+};
+
+/* ---------- Tema / configuración visual ---------- */
+const THEMES = {
+  luna:{name:"Luna", dot:"#141834", acc:"#8b7cf6"},
+  aurora:{name:"Aurora", dot:"#0d2b30", acc:"#4fd1c5"},
+  oceano:{name:"Océano", dot:"#0a2c40", acc:"#38bdf8"},
+  bosque:{name:"Bosque", dot:"#12291c", acc:"#4ade80"},
+  atardecer:{name:"Atardecer", dot:"#33182e", acc:"#fb923c"},
+  custom:{name:"Personalizado", dot:"#1b1b28", acc:"var(--accent)"}
+};
+function applyTheme(){
+  const d = Store.data;
+  document.body.dataset.theme = d.theme;
+  if (d.theme === "custom") document.body.style.setProperty("--accent", d.accent);
+  else document.body.style.removeProperty("--accent");
+  document.body.classList.toggle("reduced", d.reduced);
+  document.body.classList.toggle("fs-"+d.fs, true);
+  Particles.build();
+}
+
+/* ---------- Dashboard: tarjetas con brillo que sigue al cursor ---------- */
+const DASH = [
+  {go:"puzzle", ico:"🧩", t:"Rompecabezas", d:"Pon a prueba tu mente."},
+  {go:"phrases", ico:"💬", t:"Frases", d:"Una palabra también puede abrazar."},
+  {go:"audiobook", ico:"📖", t:"Audiobook", d:"Convierte tus documentos en historias."},
+  {go:"langs", ico:"🗣️", t:"Idiomas", d:"Habla. Practica. Aprende."},
+  {go:"ambient", ico:"🎧", t:"Ambiente", d:"Crea tu propio espacio."},
+  {go:"music", ico:"🎵", t:"Música", d:"Tus archivos y YouTube, sin límites."},
+  {go:"settings", ico:"⚙️", t:"Configuración", d:"Tu refugio, a tu manera."}
+];
+(function buildDash(){
+  const g = document.getElementById("dashGrid");
+  g.innerHTML = DASH.map(c => `
+    <article class="dash-card" data-go="${c.go}" tabindex="0" role="button" aria-label="${c.t}">
+      <span class="big">${c.ico}</span><h3>${c.t}</h3><p>${c.d}</p>
+      <span class="btn small ghost">Abrir →</span>
+    </article>`).join("");
+  g.addEventListener("pointermove", e => {
+    const card = e.target.closest(".dash-card"); if (!card) return;
+    const r = card.getBoundingClientRect();
+    card.style.setProperty("--mx", (e.clientX-r.left)+"px");
+    card.style.setProperty("--my", (e.clientY-r.top)+"px");
+  });
+  g.addEventListener("keydown", e => { // accesibilidad: Enter/Espacio activa la tarjeta
+    if ((e.key==="Enter"||e.key===" ") && e.target.classList.contains("dash-card")){ e.preventDefault(); go(e.target.dataset.go); }
+  });
+})();
+
+/* ---------- Onboarding primer ingreso ---------- */
+function onboarding(){
+  if (Store.data.onboarded) return;
+  const veil = document.createElement("div");
+  veil.className = "modal-veil";
+  veil.innerHTML = `
+    <div class="modal card" role="dialog" aria-modal="true" aria-label="Bienvenida">
+      <span class="badge">👋 Bienvenido a Refugio</span>
+      <h2 style="margin:12px 0 6px">Elige tu ambiente</h2>
+      <p class="muted" style="margin-bottom:16px">Podrás cambiarlo siempre en Configuración.</p>
+      <div class="theme-pick" id="ob-themes"></div>
+      <div class="hr"></div>
+      <div class="row" style="justify-content:space-between">
+        <label class="row" style="gap:8px"><input type="checkbox" id="ob-particles" checked> Partículas de fondo</label>
+        <button class="btn" id="ob-go">Comenzar ✨</button>
+      </div>
+    </div>`;
+  document.body.appendChild(veil);
+  const box = veil.querySelector("#ob-themes");
+  box.innerHTML = Object.entries(THEMES).map(([k,v]) => `
+    <button data-t="${k}"><span class="tp-dot" style="background:linear-gradient(135deg,${v.dot},${v.acc})"></span>${v.name}</button>`).join("");
+  box.querySelectorAll("button").forEach(b => b.onclick = () => {
+    box.querySelectorAll("button").forEach(x => x.classList.remove("sel"));
+    b.classList.add("sel"); Store.data.theme = b.dataset.t; applyTheme();
+  });
+  box.children[0].classList.add("sel");
+  veil.querySelector("#ob-go").onclick = () => {
+    Store.data.particles = veil.querySelector("#ob-particles").checked;
+    Store.data.onboarded = true; Store.save(); applyTheme();
+    veil.remove(); toast("✨ ¡Bienvenido a tu refugio!");
+  };
+}
+
+/* ---------- Panel de configuración ---------- */
+(function settingsUI(){
+  const box = document.getElementById("set-themes");
+  box.innerHTML = Object.entries(THEMES).map(([k,v]) => `
+    <button data-t="${k}"><span class="tp-dot" style="background:linear-gradient(135deg,${v.dot},${v.acc})"></span>${v.name}</button>`).join("");
+  const syncSel = () => box.querySelectorAll("button").forEach(b => b.classList.toggle("sel", b.dataset.t === Store.data.theme));
+  syncSel();
+  box.addEventListener("click", e => {
+    const b = e.target.closest("button[data-t]"); if (!b) return;
+    Store.data.theme = b.dataset.t; Store.save(); applyTheme(); syncSel(); toast("🎨 Tema: " + THEMES[b.dataset.t].name);
+  });
+  const acc = document.getElementById("set-accent");
+  acc.value = Store.data.accent;
+  acc.oninput = () => { Store.data.accent = acc.value; Store.data.theme = "custom"; Store.save(); applyTheme(); syncSel(); };
+  const fs = document.getElementById("set-fs");
+  fs.value = Store.data.fs;
+  fs.onchange = () => { document.body.classList.remove("fs-s","fs-m","fs-l"); Store.data.fs = fs.value; Store.save(); applyTheme(); };
+  const pt = document.getElementById("set-particles");
+  pt.value = Store.data.particles ? "on" : "off";
+  pt.onchange = () => { Store.data.particles = pt.value === "on"; Store.save(); Particles.build(); };
+  const pi = document.getElementById("set-pint");
+  pi.value = Store.data.pInt;
+  pi.onchange = () => { Store.data.pInt = pi.value; Store.save(); Particles.build(); };
+  const mo = document.getElementById("set-motion");
+  mo.value = Store.data.reduced ? "reduced" : "full";
+  mo.onchange = () => { Store.data.reduced = mo.value === "reduced"; Store.save(); applyTheme(); };
+  document.getElementById("set-reset").onclick = () => { if (confirm("¿Restablecer toda la configuración?")) Store.reset(); };
+})();
+
+/* ############################################################
+   MÓDULO: Rompecabezas (sliding puzzle, solvable-by-construction)
+   Interacción: tap/click (táctil y ratón) + teclado. Sin librerías.
+   ############################################################ */
+const Puzzle = {
+  n:4, board:[], img:null, imgSrc:null, moves:0, secs:0, timer:null, started:false,
+  els:{},
+  init(){
+    this.els = {
+      board: document.getElementById("pz-board"), diff: document.getElementById("pz-diff"),
+      custom: document.getElementById("pz-custom"), customWrap: document.getElementById("pz-custom-wrap"),
+      thumbs: document.getElementById("pz-thumbs"), url: document.getElementById("pz-url"),
+      time: document.getElementById("pz-time"), moves: document.getElementById("pz-moves"),
+      prog: document.getElementById("pz-prog"), bar: document.getElementById("pz-bar"),
+      best: document.getElementById("pz-best")
+    };
+    // 3 imágenes de ejemplo generadas en canvas (sin dependencias externas)
+    this.samples = [this.sampleArt(0), this.sampleArt(1), this.sampleArt(2)];
+    this.renderThumbs();
+    this.loadImage(this.samples[0]);
+    this.els.diff.onchange = () => this.els.customWrap.classList.toggle("hidden", this.els.diff.value !== "custom");
+    document.getElementById("pz-start").onclick = () => this.start();
+    document.getElementById("pz-shuffle").onclick = () => this.shuffleOnly();
+    document.getElementById("pz-url-go").onclick = () => this.fromUrl();
+    document.getElementById("pz-file").onchange = e => this.fromFile(e.target.files[0]);
+    this.els.board.addEventListener("click", e => {
+      const t = e.target.closest(".pz-tile"); if (t) this.tryMove(+t.dataset.pos);
+    });
+    addEventListener("keydown", e => { // flechas mueven la pieza hacia el hueco
+      if (!document.getElementById("view-puzzle").classList.contains("active")) return;
+      const map = {ArrowUp:1, ArrowDown:-1, ArrowLeft:1, ArrowRight:-1}; // desplazamiento del vacío
+      if (!(e.key in map)) return;
+      const emp = this.board.indexOf(this.total()-1), n = this.n;
+      let tgt = -1;
+      if (e.key==="ArrowUp" && emp >= n) tgt = emp - n;        // pieza de arriba baja
+      if (e.key==="ArrowDown" && emp < this.total()-n) tgt = emp + n;
+      if (e.key==="ArrowLeft" && emp % n !== 0) tgt = emp - 1;
+      if (e.key==="ArrowRight" && emp % n !== n-1) tgt = emp + 1;
+      if (tgt >= 0){ e.preventDefault(); this.tryMove(tgt); }
+    });
+    this.renderBest();
+  },
+  total(){ return this.n * this.n; },
+  sampleArt(i){ // arte generativo mínimo: gradientes + formas, usado como imagen de ejemplo
+    const c = document.createElement("canvas"); c.width = c.height = 480;
+    const x = c.getContext("2d");
+    const pals = [["#8b7cf6","#5eead4","#141834"],["#fb923c","#f472b6","#33182e"],["#38bdf8","#67e8f9","#041824"]][i];
+    const g = x.createLinearGradient(0,0,480,480); g.addColorStop(0,pals[0]); g.addColorStop(1,pals[1]);
+    x.fillStyle = g; x.fillRect(0,0,480,480);
+    for (let k=0;k<5;k++){
+      x.fillStyle = "rgba(255,255,255,"+(0.06+k*0.03)+")";
+      x.beginPath(); x.arc(80+k*85, 120+((k*137)%240), 46+k*14, 0, 7); x.fill();
+    }
+    x.fillStyle = pals[2];
+    for (let k=0;k<4;k++) x.fillRect(0, 380+k*22, 480, 10);
+    return c.toDataURL("image/png");
+  },
+  renderThumbs(){
+    this.els.thumbs.innerHTML = "";
+    this.samples.forEach((src, i) => {
+      const b = document.createElement("button");
+      b.innerHTML = `<canvas width="96" height="96"></canvas>`;
+      const cv = b.querySelector("canvas"), img = new Image();
+      img.onload = () => cv.getContext("2d").drawImage(img,0,0,96,96); img.src = src;
+      b.setAttribute("aria-label","Imagen de ejemplo "+(i+1));
+      b.onclick = () => { this.els.thumbs.querySelectorAll("button").forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); this.loadImage(src); };
+      if (i===0) b.classList.add("sel");
+      this.els.thumbs.appendChild(b);
+    });
+  },
+  loadImage(src){
+    const im = new Image();
+    im.onload = () => { this.img = im; this.imgSrc = src; this.build(); toast("🖼 Imagen cargada"); };
+    im.onerror = () => toast("❌ No se pudo cargar la imagen. Revisa la URL.");
+    im.src = src;
+  },
+  fromUrl(){
+    const v = this.els.url.value.trim();
+    if (!/^https?:\/\//i.test(v)) return toast("❌ Introduce una URL válida (https://…)");
+    this.els.thumbs.querySelectorAll("button").forEach(x=>x.classList.remove("sel"));
+    this.loadImage(v);
+  },
+  fromFile(file){
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return toast("❌ El archivo debe ser una imagen.");
+    if (file.size > 8e6) return toast("❌ Imagen demasiado grande (máx. 8 MB).");
+    const r = new FileReader();
+    r.onload = () => { this.els.thumbs.querySelectorAll("button").forEach(x=>x.classList.remove("sel")); this.loadImage(r.result); };
+    r.onerror = () => toast("❌ No se pudo leer el archivo.");
+    r.readAsDataURL(file);
+  },
+  build(){ // tablero resuelto + render inicial
+    this.n = this.els.diff.value === "custom"
+      ? Math.min(8, Math.max(3, +this.els.custom.value || 4))
+      : +this.els.diff.value;
+    this.board = Array.from({length:this.total()}, (_,i)=>i);
+    this.moves = 0; this.secs = 0; this.started = false;
+    clearInterval(this.timer); this.stats();
+    this.render();
+  },
+  start(){ if (!this.img) return toast("❌ Carga una imagen primero."); this.build(); this.scramble(); this.render(); toast("🧩 ¡Rompecabezas iniciado!"); },
+  shuffleOnly(){ if (!this.board.length) return toast("❌ Inicia el rompecabezas primero."); this.scramble(); this.render(); },
+  scramble(){ // mezcla ejecutando movimientos válidos aleatorios => siempre resoluble
+    const n = this.n, emp = () => this.board.indexOf(this.total()-1);
+    for (let k=0; k < n*n*30; k++){
+      const e = emp(), opts = [];
+      if (e >= n) opts.push(e-n); if (e < this.total()-n) opts.push(e+n);
+      if (e % n !== 0) opts.push(e-1); if (e % n !== n-1) opts.push(e+1);
+      const t = opts[Math.floor(Math.random()*opts.length)];
+      [this.board[e], this.board[t]] = [this.board[t], this.board[e]];
+    }
+    // evita entregarlo ya resuelto
+    if (this.isSolved()){ const e = emp(); [this.board[e], this.board[e-1]] = [this.board[e-1], this.board[e]]; }
+    this.moves = 0; this.secs = 0; this.started = false; clearInterval(this.timer); this.stats();
+  },
+  isSolved(){ return this.board.every((v,i) => v === i); },
+  tryMove(pos){
+    const emp = this.board.indexOf(this.total()-1), n = this.n;
+    const adj = (pos === emp-n || pos === emp+n || (pos === emp-1 && emp%n !== 0) || (pos === emp+1 && emp%n !== n-1));
+    if (!adj || this.isSolved()) return;
+    [this.board[pos], this.board[emp]] = [this.board[emp], this.board[pos]];
+    this.moves++;
+    if (!this.started){ this.started = true; this.timer = setInterval(()=>{ this.secs++; this.stats(); }, 1000); }
+    this.render(); this.stats();
+    if (this.isSolved()) this.win();
+  },
+  correct(){ return this.board.filter((v,i) => v === i).length; },
+  render(){
+    const n = this.n, b = this.els.board;
+    b.style.gridTemplateColumns = `repeat(${n},1fr)`;
+    b.innerHTML = "";
+    this.board.forEach((tile, pos) => {
+      const d = document.createElement("button");
+      d.className = "pz-tile" + (tile === this.total()-1 ? " empty" : "");
+      d.dataset.pos = pos; d.setAttribute("role","gridcell");
+      if (tile !== this.total()-1){
+        d.setAttribute("aria-label","Pieza "+(tile+1));
+        d.style.backgroundImage = `url(${this.imgSrc})`;
+        d.style.backgroundSize = `${n*100}% ${n*100}%`;
+        const col = tile % n, row = Math.floor(tile/n);
+        d.style.backgroundPosition = `${col/(n-1)*100}% ${row/(n-1)*100}%`;
+      } else d.setAttribute("aria-label","Espacio vacío");
+      b.appendChild(d);
+    });
+  },
+  stats(){
+    const mm = String(Math.floor(this.secs/60)).padStart(2,"0"), ss = String(this.secs%60).padStart(2,"0");
+    this.els.time.textContent = mm+":"+ss;
+    this.els.moves.textContent = this.moves;
+    const pct = this.board.length ? Math.round(this.correct()/this.total()*100) : 0;
+    this.els.prog.textContent = pct + "%";
+    this.els.bar.style.width = pct + "%";
+  },
+  renderBest(){
+    this.els.best.textContent = Store.data.bestTime ? Store.data.bestTime + " s" : "—";
+  },
+  win(){
+    clearInterval(this.timer); this.started = false;
+    if (!Store.data.bestTime || this.secs < Store.data.bestTime){ Store.data.bestTime = this.secs; Store.save(); }
+    this.renderBest();
+    Confetti.burst();
+    toast(`🎉 ¡Completado en ${this.secs} s con ${this.moves} movimientos!`);
+  }
+};
+
+/* Confetti — celebración en canvas temporal, no interactivo */
+const Confetti = {
+  burst(){
+    const cv = document.getElementById("confetti"), c = cv.getContext("2d");
+    cv.width = innerWidth; cv.height = innerHeight;
+    const colors = [getComputedStyle(document.body).getPropertyValue("--accent"), "#fbbf24", "#f472b6", "#5eead4", "#fff"];
+    const ps = Array.from({length:160}, () => ({
+      x: innerWidth/2 + (Math.random()-.5)*220, y: innerHeight*0.35,
+      vx:(Math.random()-.5)*11, vy:-(Math.random()*11+4), g:.28,
+      s: Math.random()*7+4, r: Math.random()*Math.PI, vr:(Math.random()-.5)*.3,
+      col: colors[Math.floor(Math.random()*colors.length)], life: 130+Math.random()*50
+    }));
+    let frames = 0;
+    (function tick(){
+      c.clearRect(0,0,cv.width,cv.height);
+      for (const p of ps){
+        p.x+=p.vx; p.y+=p.vy; p.vy+=p.g; p.r+=p.vr; p.life--;
+        c.save(); c.translate(p.x,p.y); c.rotate(p.r);
+        c.globalAlpha = Math.max(0, Math.min(1, p.life/60));
+        c.fillStyle = p.col; c.fillRect(-p.s/2,-p.s/2,p.s,p.s*0.6); c.restore();
+      }
+      if (++frames < 220) requestAnimationFrame(tick); else c.clearRect(0,0,cv.width,cv.height);
+    })();
+  }
+};
+
+/* ############################################################
+   MÓDULO: Frases — banco local por categoría (Demo Mode).
+   a: null = frase original de la app (sin atribución falsa).
+   ############################################################ */
+const PHRASES = {
+  reconfortante: [
+    {t:"Respira. Estás más cerca de lo que crees.", a:null},
+    {t:"No tienes que tener todo resuelto hoy. Solo da el siguiente paso.", a:null},
+    {t:"Las tormentas también enseñan a bailar bajo la lluvia.", a:null},
+    {t:"Lo que sientes es válido, y también es temporal.", a:null}
+  ],
+  motivacional: [
+    {t:"El éxito es la suma de pequeños esfuerzos repetidos cada día.", a:"Robert Collier"},
+    {t:"No cuentes los días, haz que los días cuenten.", a:"Muhammad Ali"},
+    {t:"El mejor momento para empezar fue ayer. El segundo mejor es ahora.", a:null},
+    {t:"Disciplina: elegir lo que quieres más sobre lo que quieres ahora.", a:null}
+  ],
+  amor: [
+    {t:"Amar no es mirarse el uno al otro, es mirar juntos en la misma dirección.", a:"Antoine de Saint-Exupéry"},
+    {t:"Te quiero no solo por cómo eres, sino por cómo soy cuando estoy contigo.", a:null},
+    {t:"El amor verdadero no tiene final feliz, porque simplemente no tiene final.", a:null}
+  ],
+  amistad: [
+    {t:"Un amigo es alguien que conoce tu canción y te la canta cuando la olvidas.", a:null},
+    {t:"La amistad duplica las alegrías y divide las angustias por la mitad.", a:"Francis Bacon"},
+    {t:"Los amigos son la familia que uno elige.", a:null}
+  ],
+  gratitud: [
+    {t:"La gratitud convierte lo que tenemos en suficiente.", a:null},
+    {t:"Agradece lo pequeño y encontrarás que tienes mucho.", a:null},
+    {t:"El agradecimiento es la memoria del corazón.", a:"Jean-Baptiste Massieu"}
+  ],
+  especial: [
+    {t:"Eres esa persona que hace que los días ordinarios parezcan especiales.", a:null},
+    {t:"Hay personas que llegan y lo iluminan todo. Tú eres una de ellas.", a:null}
+  ],
+  precioso: [
+    {t:"Eres más valioso de lo que crees, más fuerte de lo que pareces y más querido de lo que imaginas.", a:null},
+    {t:"La belleza se mide por el brillo que dejas en los demás. El tuyo ilumina.", a:null}
+  ],
+  buenos_dias: [
+    {t:"Buenos días. Que hoy la vida te sorprenda con algo bonito.", a:null},
+    {t:"Cada mañana es una página en blanco. Escribe algo hermoso.", a:null},
+    {t:"Despierta con determinación, duerme con satisfacción.", a:null}
+  ],
+  buenas_noches: [
+    {t:"Buenas noches. Descansa: mañana el sol volverá a apostar por ti.", a:null},
+    {t:"Que tus sueños sean suaves y tu despertar, valiente.", a:null},
+    {t:"Cierra los ojos con gratitud y el mañana se encargará del resto.", a:null}
+  ],
+  tristeza: [
+    {t:"Está bien no estar bien. Aquí estoy, a tu ritmo.", a:null},
+    {t:"Incluso la noche más oscura termina con un amanecer.", a:null},
+    {t:"Llora si lo necesitas; el agua también limpia el alma.", a:null}
+  ],
+  animo: [
+    {t:"Caerse está permitido; quedarse en el suelo, nunca es obligatorio.", a:null},
+    {t:"Tú has sobrevivido al 100% de tus días más difíciles. Eso dice mucho de ti.", a:null},
+    {t:"El ánimo vuelve siempre, igual que las olas vuelven a la orilla.", a:null}
+  ],
+  autoestima: [
+    {t:"No eres una opinión de los demás.", a:null},
+    {t:"Méritate: hoy hiciste lo que pudiste, y eso basta.", a:null},
+    {t:"Eres obra en proceso y ya eres una obra de arte.", a:null}
+  ],
+  reflexion: [
+    {t:"Vale más un minimo de conciencia que un máximo de conocimiento.", a:"Miguel de Unamuno"},
+    {t:"No vemos las cosas como son, las vemos como somos.", a:"Anaïs Nin"},
+    {t:"La vida es lo que pasa mientras estamos ocupados haciendo otros planes.", a:"John Lennon"}
+  ],
+  paz: [
+    {t:"La paz comienza con una sonrisa.", a:"Madre Teresa"},
+    {t:"Tranquilidad: dejar ir lo que no puedes cambiar.", a:null},
+    {t:"El silencio a veces es la respuesta más honesta.", a:null}
+  ],
+  esperanza: [
+    {t:"La esperanza es lo último que se pierde.", a:"proverbio"},
+    {t:"Después de la tormenta siempre llega la calma.", a:"proverbio"},
+    {t:"Mientras haya un mañana, hay una posibilidad.", a:null}
+  ],
+  nostalgia: [
+    {t:"Añorar es sentir que el tiempo fue un lugar donde fuimos felices.", a:null},
+    {t:"Lo que fue hermoso no se pierde: se guarda.", a:null}
+  ],
+  inspiracion: [
+    {t:"Imagina lo que quieres ser y atrévete a empezar hoy.", a:null},
+    {t:"Las estrellas no pueden brillar sin oscuridad.", a:null},
+    {t:"Todo lo que alguna vez soñaste está del otro lado del miedo.", a:null}
+  ]
+};
+const PH_LABEL = {reconfortante:"Reconfortantes",motivacional:"Motivacionales",amor:"Amor",amistad:"Amistad",gratitud:"Gratitud",especial:"Para alguien especial",precioso:"Eres precioso/a",buenos_dias:"Buenos días",buenas_noches:"Buenas noches",tristeza:"Cuando estás triste",animo:"Necesito ánimo",autoestima:"Autoestima",reflexion:"Reflexión",paz:"Paz",esperanza:"Esperanza",nostalgia:"Nostalgia",inspiracion:"Inspiración"};
+
+const Phrases = {
+  cat:"reconfortante", hist:[],
+  init(){
+    const cats = document.getElementById("ph-cats");
+    cats.innerHTML = Object.keys(PHRASES).map(k => `<button class="chip" role="tab" data-c="${k}">${PH_LABEL[k]}</button>`).join("");
+    cats.onclick = e => { const b = e.target.closest("[data-c]"); if (b) this.setCat(b.dataset.c); };
+    document.getElementById("ph-next").onclick = () => this.next(1);
+    document.getElementById("ph-prev").onclick = () => this.next(-1);
+    document.getElementById("ph-fav").onclick = () => this.fav();
+    document.getElementById("ph-copy").onclick = () => this.copy();
+    document.getElementById("ph-share").onclick = () => this.share();
+    document.getElementById("ph-speak").onclick = () => this.speak();
+    this.setCat("reconfortante");
+    this.renderFavs();
+  },
+  setCat(c){ this.cat = c; this.hist = [];
+    document.querySelectorAll("#ph-cats .chip").forEach(b => b.classList.toggle("on", b.dataset.c === c));
+    this.show(this.pick());
+  },
+  pick(except){ // elige al azar evitando repetir la última
+    const list = PHRASES[this.cat];
+    let p; do { p = list[Math.floor(Math.random()*list.length)]; } while (list.length>1 && p === this.cur);
+    return p;
+  },
+  show(p){ this.cur = p;
+    document.getElementById("ph-text").textContent = p.t;
+    document.getElementById("ph-author").textContent = p.a ? "— " + p.a : "— Frase original de Refugio";
+    document.getElementById("ph-cat").textContent = PH_LABEL[this.cat];
+    document.getElementById("ph-fav").classList.toggle("on", Store.data.favs.some(f => f.t === p.t));
+  },
+  next(dir){
+    if (dir === 1){ const p = this.pick(); this.hist.push(this.cur); this.show(p); }
+    else if (this.hist.length){ this.show(this.hist.pop()); } else toast("No hay frases anteriores.");
+  },
+  fav(){
+    const i = Store.data.favs.findIndex(f => f.t === this.cur.t);
+    if (i >= 0){ Store.data.favs.splice(i,1); toast("⭐ Frase quitada de favoritas"); }
+    else { Store.data.favs.push({...this.cur, cat:this.cat}); toast("✓ Frase guardada"); }
+    Store.save(); this.renderFavs();
+    document.getElementById("ph-fav").classList.toggle("on", i < 0);
+  },
+  renderFavs(){
+    const ul = document.getElementById("ph-favs");
+    if (!Store.data.favs.length){ ul.innerHTML = "<li class='muted'>Aún no guardas frases.</li>"; return; }
+    ul.innerHTML = "";
+    Store.data.favs.forEach((f, i) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<span style="flex:1">“${f.t}” <span class="muted" style="font-size:.78rem">· ${PH_LABEL[f.cat]||""}</span></span><span>🔊</span><span>🗑</span>`;
+      li.querySelector("span:nth-child(2)").onclick = ev => { ev.stopPropagation(); TTS.speak(f.t); };
+      li.querySelector("span:nth-child(3)").onclick = ev => { ev.stopPropagation(); Store.data.favs.splice(i,1); Store.save(); this.renderFavs(); toast("Frase eliminada"); };
+      li.onclick = () => { this.setCat(f.cat in PHRASES ? f.cat : this.cat); this.show(f); };
+      ul.appendChild(li);
+    });
+  },
+  async copy(){
+    try { await navigator.clipboard.writeText("“"+this.cur.t+"”" + (this.cur.a ? " — "+this.cur.a : "")); toast("✓ Copiada al portapapeles"); }
+    catch(e){ toast("❌ No se pudo copiar (permiso denegado)"); }
+  },
+  async share(){
+    const text = "“"+this.cur.t+"”" + (this.cur.a ? " — "+this.cur.a : "");
+    if (navigator.share){ try { await navigator.share({title:"Frase de Refugio", text}); } catch(e){} }
+    else { try { await navigator.clipboard.writeText(text); toast("✓ Enlace de texto copiado para compartir"); } catch(e){ toast("❌ Compartir no disponible"); } }
+  },
+  speak(){ TTS.speak(this.cur.t); }
+};
+
+/* TTS — envoltorio sobre SpeechSynthesis del navegador (Web Speech API).
+   Devuelve error amigable si la API no existe (algunos navegadores). */
+const TTS = {
+  ok(){ return typeof window.speechSynthesis !== "undefined"; },
+  speak(text, opts={}){
+    if (!this.ok()) return toast("❌ Tu navegador no soporta síntesis de voz.");
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    if (opts.rate) u.rate = opts.rate;
+    if (opts.voice) u.voice = opts.voice;
+    speechSynthesis.speak(u);
+  },
+  stop(){ if (this.ok()) speechSynthesis.cancel(); }
+};
+
+/* ############################################################
+   MÓDULO: Audiobook — PDF (pdf.js) + SpeechSynthesis.
+   Estados: loading / empty / error / success.
+   PDF escaneado sin texto → aviso amigable (requiere OCR).
+   ############################################################ */
+const Audiobook = {
+  pdf:null, pagesText:[], page:1, chunks:[], ci:0, playing:false,
+  els:{},
+  init(){
+    this.els = {
+      file: document.getElementById("ab-file"), page: document.getElementById("ab-page"),
+      text: document.getElementById("ab-text"), pageno: document.getElementById("ab-pageno"),
+      bar: document.getElementById("ab-bar"), play: document.getElementById("ab-play"),
+      pause: document.getElementById("ab-pause"),
+      rate: document.getElementById("ab-rate"), voice: document.getElementById("ab-voice")
+    };
+    this.els.file.onchange = e => e.target.files[0] && this.loadFile(e.target.files[0]);
+    document.getElementById("ab-demo").onclick = () => this.loadDemo();
+    document.getElementById("ab-play").onclick = () => this.play();
+    document.getElementById("ab-pause").onclick = () => this.pause();
+    document.getElementById("ab-stop").onclick = () => this.stop();
+    document.getElementById("ab-prev-p").onclick = () => this.gotoPage(this.page-1);
+    document.getElementById("ab-next-p").onclick = () => this.gotoPage(this.page+1);
+    this.populateVoices();
+    if (speechSynthesis) speechSynthesis.onvoiceschanged = () => this.populateVoices();
+  },
+  populateVoices(){
+    const ss = window.speechSynthesis; // puede ser undefined en navegadores antiguos
+    if (!ss || typeof ss.getVoices !== "function") return;
+    const vs = ss.getVoices() || [];
+    this.els.voice.innerHTML = `<option value="">Predeterminada</option>` +
+      vs.map((v,i) => `<option value="${i}">${v.name} (${v.lang})</option>`).join("");
+  },
+  ok(){ return typeof window.speechSynthesis !== "undefined"; },
+  async loadFile(file){
+    this.stop();
+    if (file.type !== "application/pdf") return toast("❌ El archivo debe ser un PDF.");
+    if (file.size > 20e6) return toast("❌ PDF demasiado grande (máx. 20 MB).");
+    if (!window.pdfjsLib) return toast("❌ No se pudo cargar el visor PDF. Revisa tu conexión.");
+    this.els.page.innerHTML = `<div class="skel" style="width:80%;height:80%"></div>`; // loading
+    try {
+      const buf = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+      this.pdf = pdf; this.pagesText = [];
+      for (let i=1; i<=pdf.numPages; i++){
+        const tp = await (await pdf.getPage(i)).getTextContent();
+        this.pagesText.push(tp.items.map(it => it.str).join(" "));
+      }
+      const totalChars = this.pagesText.join("").replace(/\s/g,"").length;
+      if (totalChars < 20) {
+        this.pagesText = null; this.els.page.innerHTML = "";
+        return toast("📄 Este PDF parece escaneado (sin texto). Requiere OCR para ser leído.");
+      }
+      this.page = 1;
+      this.gotoPage(1, true);
+      toast(`📖 “${file.name}” cargado (${pdf.numPages} páginas)`);
+    } catch(e){
+      console.error(e);
+      this.els.page.innerHTML = `<p class="muted" style="padding:20px">Carga un PDF para ver sus páginas.</p>`;
+      toast("❌ No pudimos leer este PDF. Puede estar dañado o protegido.");
+    }
+  },
+  loadDemo(){ // texto de ejemplo para probar TTS sin archivo
+    this.pdf = null; this.pagesText = [DEMO_TEXT]; this.page = 1;
+    this.els.page.innerHTML = `<p class="muted" style="padding:20px">Modo texto de ejemplo (sin PDF).</p>`;
+    this.gotoPage(1, true);
+    toast("📖 Texto de ejemplo cargado");
+  },
+  async renderPage(n){
+    if (!this.pdf){ return; }
+    try {
+      const p = await this.pdf.getPage(n);
+      const vp1 = p.getViewport({scale:1});
+      const scale = 420 / vp1.width;
+      const vp = p.getViewport({scale});
+      const cv = document.createElement("canvas");
+      cv.width = vp.width; cv.height = vp.height;
+      this.els.page.innerHTML = ""; this.els.page.appendChild(cv);
+      await p.render({canvasContext: cv.getContext("2d"), viewport: vp}).promise;
+    } catch(e){ console.error(e); }
+  },
+  gotoPage(n, silent){
+    if (!this.pagesText) return;
+    if (n < 1 || n > this.pagesText.length) return;
+    this.stop(); this.page = n;
+    this.els.pageno.textContent = `${n} / ${this.pagesText.length}`;
+    this.renderPage(n);
+    const txt = this.pagesText[n-1] || "(página sin texto)";
+    this.els.text.innerHTML = txt.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+    this.els.bar.style.width = "0%";
+    if (!silent) toast(`📄 Página ${n}`);
+  },
+  sentenceSplit(text){ // divide en oraciones sin lookbehind (máxima compatibilidad)
+    return (text.match(/[^.!?…\n]+[.!?…]*/g) || [text]).map(s => s.trim()).filter(s => s.length > 0);
+  },
+  play(){
+    if (!this.ok()) return toast("❌ Tu navegador no soporta síntesis de voz.");
+    if (!this.pagesText) return toast("❌ Carga un documento o busca un libro primero.");
+    if (this.playing) return;
+    // Si venimos de una pausa, seguimos desde el fragmento recordado (this.ci);
+    // asi la reanudacion funciona incluso donde speechSynthesis.pause() falla
+    // (bug conocido de Chrome desktop y Safari iOS).
+    if (!(this.paused && this.chunks.length && this.ci < this.chunks.length)){
+      this.chunks = this.sentenceSplit(this.pagesText[this.page-1]);
+      this.ci = 0;
+    }
+    this.paused = false;
+    if (!this.chunks.length) return toast("Esta página no tiene texto.");
+    const voiceIdx = this.els.voice.value;
+    const voice = voiceIdx ? speechSynthesis.getVoices()[+voiceIdx] : null;
+    const rate = +this.els.rate.value;
+    this.playing = true;
+    this.els.play.textContent = "▶ Leyendo…";
+    this.els.pause.textContent = "⏸ Pausar";
+    const step = () => {
+      if (!this.playing) return;
+      if (this.ci >= this.chunks.length){ this.onPageEnd(); return; }
+      const u = new SpeechSynthesisUtterance(this.chunks[this.ci]);
+      u.rate = rate; if (voice) u.voice = voice;
+      this.els.bar.style.width = Math.round((this.ci+1)/this.chunks.length*100) + "%";
+      u.onend = () => { this.ci++; step(); };
+      u.onerror = () => { this.playing = false; this.els.play.textContent = "▶ Reproducir"; };
+      speechSynthesis.speak(u);
+    };
+    step();
+  },
+  onPageEnd(){
+    this.playing = false; this.paused = false; this.ci = 0;
+    this.els.play.textContent = "▶ Reproducir";
+    if (this.page < this.pagesText.length){ this.gotoPage(this.page+1, true); setTimeout(()=>this.play(), 400); }
+    else toast("📖 Fin del documento");
+  },
+  pause(){
+    if (!this.ok()) return;
+    if (this.playing){ // pausar = detener la cola y recordar el fragmento
+      speechSynthesis.cancel();
+      this.playing = false; this.paused = true;
+      this.els.play.textContent = "▶ Reproducir";
+      this.els.pause.textContent = "▶ Continuar";
+      toast("⏸ Pausado");
+    } else if (this.paused){ // continuar exactamente donde se quedó
+      this.play();
+    }
+  },
+  stop(){
+    if (!this.ok()) return;
+    this.playing = false; this.paused = false; this.ci = 0;
+    speechSynthesis.cancel();
+    if (this.els.play) this.els.play.textContent = "▶ Reproducir";
+    if (this.els.pause) this.els.pause.textContent = "⏸ Pausar";
+  },
+  /* ---- Carga de libros remotos (catálogo) ---- */
+  async loadUrl(url, name){ // PDF remoto vía pdf.js (requiere CORS del servidor)
+    this.stop();
+    if (!window.pdfjsLib) return toast("❌ Visor PDF no disponible (¿sin conexión?).");
+    this.els.page.innerHTML = `<div class="skel" style="width:80%;height:80%"></div>`;
+    // Cadena de apertura: directo → proxies CORS públicos. Así el PDF se
+    // abre aunque el servidor bloquee CORS o filtre por origen del navegador.
+    let pdf = null, lastErr = null;
+    for (const u of [url, ...Catalog.PROXIES.map(p => p(url))]){
+      try { pdf = await pdfjsLib.getDocument({ url: u }).promise; break; }
+      catch(e){ lastErr = e; }
+    }
+    if (!pdf){
+      console.error("loadUrl:", lastErr);
+      this.els.page.innerHTML = `<p class="muted" style="padding:20px">Carga un documento o elige un libro del catálogo.</p>`;
+      return toast("❌ El documento remoto no respondió (ni directo ni con proxies). Descárgalo y súbelo manualmente.");
+    }
+    try {
+      this.pdf = pdf; this.pagesText = [];
+      for (let i=1; i<=pdf.numPages; i++){
+        const tp = await (await pdf.getPage(i)).getTextContent();
+        this.pagesText.push(tp.items.map(it => it.str).join(" "));
+      }
+      const totalChars = this.pagesText.join("").replace(/\s/g,"").length;
+      if (totalChars < 20){
+        this.pagesText = null; this.els.page.innerHTML = "";
+        return toast("📄 Este documento parece escaneado (sin texto). Requiere OCR.");
+      }
+      this.page = 1; this.gotoPage(1, true);
+      toast(`📖 “${name}” cargado (${pdf.numPages} páginas)`);
+    } catch(e){
+      console.error(e);
+      toast("❌ El documento abrió, pero no pudimos extraer su texto (¿protegido o dañado?).");
+    }
+  },
+  loadTextBook(title, text){ // libro en texto plano: se pagina y se narra directamente
+    this.stop();
+    this.pdf = null;
+    const clean = (text || "").trim();
+    if (clean.length < 60) return toast("❌ El texto descargado parece vacío.");
+    if (/^\s*<(!doctype html|html)/i.test(clean)) return toast("❌ El servidor devolvió una página web en lugar del libro. Prueba otro resultado o fuente.");
+    this.pagesText = this.paginate(this.cleanGutenberg(clean));
+    this.page = 1;
+    this.els.page.innerHTML = `<div style="padding:26px;text-align:center">
+      <div style="font-size:2.6rem">📚</div>
+      <p style="font-weight:700;margin-top:8px">${this.esc(title)}</p>
+      <p class="muted" style="font-size:.82rem;margin-top:6px">Libro de texto · ${this.pagesText.length} páginas de lectura</p></div>`;
+    this.gotoPage(1, true);
+    toast(`📚 “${title}” listo para escucharse`);
+  },
+  paginate(text, size=2600){ // divide en "páginas" en límite de párrafo
+    const pages = []; let cur = "";
+    for (const p of text.split(/\n{2,}/)){
+      if (cur && (cur + "\n\n" + p).length > size){ pages.push(cur.trim()); cur = p; }
+      else cur = cur ? cur + "\n\n" + p : p;
+    }
+    if (cur.trim()) pages.push(cur.trim());
+    return pages.length ? pages : [text];
+  },
+  cleanGutenberg(t){ // recorta cabecera/licencia de los textos de Gutenberg
+    const s = t.indexOf("*** START OF");
+    const e = t.indexOf("*** END OF");
+    if (s >= 0 && e > s) return t.slice(s, e);
+    return t;
+  },
+  esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+};
+const DEMO_TEXT = `El principito, de Antoine de Saint-Exupéry (dominio público en muchos países). \
+Capítulo uno. Cuando yo tenía seis años vi en un libro sobre la selva virgen una magnífica lámina. \
+Representaba una serpiente boa que se tragaba a una fiera. El libro decía: las serpientes boas tragan sus presas enteras, sin masticarlas. \
+Después no pueden moverse y duermen durante los seis meses de su digestión. Reflexioné mucho sobre las aventuras de la jungla, y dibujé mi primera obra con lápices de colores. \
+Mi obra número uno era así: enseñaba una serpiente boa que digería a un elefante. Enseñé mi obra maestra a las personas mayores y les pregunté si mi dibujo les daba miedo. \
+Me contestaron: ¿por qué habría de asustar un sombrero? Mi dibujo no representaba un sombrero, sino una serpiente boa que digería un elefante. \
+Dibujé entonces el interior de la serpiente boa, para que las personas mayores pudieran comprender. Siempre tienen necesidad de explicaciones. \
+Este es el segundo dibujo de mi obra. Las personas mayores me aconsejaron abandonar el dibujo de serpientes boas, tanto abiertas como cerradas, y aplicarme más a la geografía, la historia, el cálculo y la gramática. \
+Así fue como a la edad de seis años abandoné una magnífica carrera de pintor. Había quedado desilusionado por el fracaso de mis dibujos número uno y número dos. \
+Las personas mayores nunca comprenden nada por sí solas, y es agotador para los niños tener que darles explicaciones sin cesar. \
+Tuve, pues, que elegir otro oficio y aprendí a pilotar aviones. He volado un poco por todo el mundo. \
+Y la geografía, en efecto, me ha servido de mucho. Al primer vistazo distingo la China de Arizona. \
+Esto es útil, sobre todo si se pierde uno durante la noche. A lo largo de mi vida he tenido multitud de contactos con multitud de personas serias. \
+He vivido mucho tiempo entre personas mayores y las he conocido muy de cerca. Pero esto no ha mejorado demasiado mi opinión sobre ellas. \
+Cuando he encontrado a alguien que parecía un poco lúcido, lo he sometido a mi experimento de la boa, que siempre está sobre mí. \
+Quería saber si era un verdadero entendido. Pero invariablemente me contestaban: es un sombrero. \
+Me abstenía entonces de hablarles de serpientes boas, de estrellas, ni de flores. Ponía miave a su alcance. \
+Hablaba de bridge, de golf, de política y de corbatas. Y la persona mayor quedaba encantada de conocer a un hombre tan sensato.`;
+
+
+/* ############################################################
+   MÓDULO: Catálogo de libros de dominio público.
+   Fuentes reales, gratuitas y legales (sin clave API):
+   - Gutendex: API pública de Project Gutenberg (70.000+ libros).
+     https://gutendex.com/books/?search=...
+   - Archive.org: API oficial advancedsearch + metadata.
+     https://archive.org/advancedsearch.php?q=...&output=json
+   Ambas permiten CORS. Si una fuente falla: mensaje amigable.
+   ############################################################ */
+const Catalog = {
+  FEATURED: [
+    ["Don Quijote","Cervantes"],["Frankenstein","Mary Shelley"],["Drácula","Bram Stoker"],
+    ["Sherlock Holmes","Conan Doyle"],["Orgullo y prejuicio","Jane Austen"],
+    ["El fantasma de la ópera","Gaston Leroux"],["La isla del tesoro","Stevenson"],
+    ["Cuentos de los Grimm","Grimm"],["El retrato de Dorian Gray","Wilde"],
+    ["Alicia en el País de las Maravillas","Carroll"],["El conde de Montecristo","Dumas"],
+    ["La máquina del tiempo","H. G. Wells"],["Veinte mil leguas de viaje submarino","Julio Verne"]
+  ],
+  init(){
+    this.q = document.getElementById("cat-q");
+    this.src = document.getElementById("cat-src");
+    this.list = document.getElementById("cat-results");
+    document.getElementById("cat-go").onclick = () => this.search();
+    this.q.onkeydown = e => { if (e.key === "Enter") this.search(); };
+    const box = document.getElementById("cat-featured");
+    this.FEATURED.forEach(([t,a]) => {
+      const b = document.createElement("button");
+      b.className = "chip"; b.textContent = t; b.title = a;
+      b.onclick = () => { this.src.value = "gutendex"; this.q.value = t + " " + a; this.search(); };
+      box.appendChild(b);
+    });
+  },
+  /* fetch JSON con timeout: evita que un servicio lento deje la búsqueda
+     "colgada" indefinidamente (la causa del error que reportaste) */
+  async fetchJSON(url, timeout = 12000){
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), timeout);
+    try {
+      const res = await fetch(url, { signal: ctl.signal });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return await res.json();
+    } finally { clearTimeout(t); }
+  },
+  fetchWithTimeout(url, timeout = 10000){
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), timeout);
+    return fetch(url, { signal: ctl.signal }).finally(() => clearTimeout(t));
+  },
+  /* Proxies CORS públicos de solo lectura: respaldo cuando el servidor
+     original bloquea conexiones desde el navegador (CORS), filtra por
+     origen o está parcialmente caído. Confirmados activos. */
+  PROXIES: [
+    u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u),
+    u => "https://api.cors.lol/?url=" + encodeURIComponent(u),
+    u => "https://cors.eu.org/" + u
+  ],
+  async fetchText(url){ // descarga de texto con cadena de respaldo completa
+    try { const r = await this.fetchWithTimeout(url); if (r.ok) return await r.text(); } catch(e){}
+    for (const p of this.PROXIES){
+      try { const r = await this.fetchWithTimeout(p(url)); if (r.ok) return await r.text(); } catch(e){}
+    }
+    throw new Error("fetchText falló tras proxies: " + url);
+  },
+  skeleton(){ this.list.innerHTML = '<li><div class="skel" style="width:100%;height:20px"></div></li>'.repeat(3); },
+  async search(){
+    const query = this.q.value.trim();
+    if (!query) return toast("✏️ Escribe un título o autor para buscar.");
+    this.skeleton();
+    const src = this.src.value;
+    try {
+      const books = src === "all" ? await this.searchAll(query)
+        : src === "archive" ? await this.searchArchive(query)
+        : src === "openlib" ? await this.searchOpenLib(query)
+        : src === "wikisource" ? await this.searchWikisource(query)
+        : await this.searchGutendex(query);
+      this.render(books);
+    } catch(e){
+      console.error(e);
+      this.list.innerHTML = "<li class='muted'>La búsqueda falló. Revisa tu conexión, prueba otra fuente o inténtalo de nuevo.</li>";
+      toast("❌ Búsqueda no disponible ahora mismo");
+    }
+  },
+  /* "Todas": consulta las 4 fuentes en paralelo; las que fallen no
+     bloquean a las demás (Promise.allSettled). */
+  async searchAll(query){
+    const jobs = await Promise.allSettled([
+      this.searchGutendex(query), this.searchArchive(query),
+      this.searchOpenLib(query), this.searchWikisource(query)
+    ]);
+    const books = [];
+    jobs.forEach(j => { if (j.status === "fulfilled") books.push(...j.value); });
+    if (!books.length) throw new Error("todas las fuentes fallaron");
+    return books.slice(0, 24);
+  },
+  render(books){
+    if (!books.length){ this.list.innerHTML = "<li class='muted'>Sin resultados. Prueba con otro título o fuente.</li>"; return; }
+    this.list.innerHTML = "";
+    books.forEach(b => {
+      const li = document.createElement("li");
+      li.innerHTML = `<span>📖</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.title}<span class="muted" style="font-size:.78rem"> · ${b.author} · ${b.src}</span></span><span class="btn small ghost">Cargar</span>`;
+      li.querySelector(".btn").onclick = ev => { ev.stopPropagation(); b.load(); };
+      this.list.appendChild(li);
+    });
+    toast(`📚 ${books.length} libros encontrados`);
+  },
+  /* --- Project Gutenberg vía Gutendex, con respaldo por proxy CORS ---
+     Gutendex es un servicio voluntario y a veces cae o tarda; si falla,
+     se reintenta a través de un proxy público de solo lectura. */
+  async searchGutendex(query){
+    const url = "https://gutendex.com/books/?search=" + encodeURIComponent(query);
+    let data;
+    try { data = await this.fetchJSON(url, 8000); }
+    catch(e){
+      console.warn("Gutendex directo falló; reintentando vía proxy", e);
+      data = await this.fetchJSON("https://api.allorigins.win/raw?url=" + encodeURIComponent(url));
+    }
+    return (data.results || []).slice(0, 12).map(b => ({
+      title: b.title, author: (b.authors && b.authors[0] && b.authors[0].name) || "Autor desconocido",
+      src: "Gutenberg", load: () => this.loadGutenberg(b)
+    }));
+  },
+  async loadGutenberg(b){
+    toast("📚 Descargando libro…");
+    try {
+      const fmts = b.formats || {};
+      const txt = Object.keys(fmts).find(k => k.startsWith("text/plain"));
+      const pdf = Object.keys(fmts).find(k => k.includes("pdf"));
+      if (txt){
+        Audiobook.loadTextBook(b.title, await this.fetchText(fmts[txt]));
+      } else if (pdf){
+        await Audiobook.loadUrl(fmts[pdf], b.title);
+      } else toast("❌ Este libro no tiene formato escuchable (texto/PDF).");
+    } catch(e){ console.error(e); toast("❌ No pudimos descargar el libro (conexión o CORS)."); }
+  },
+  /* --- Archive.org (API oficial) --- */
+  async searchArchive(query){
+    const data = await this.fetchJSON("https://archive.org/advancedsearch.php?q=" +
+      encodeURIComponent(query + " AND mediatype:texts") +
+      "&fl[]=identifier&fl[]=title&fl[]=creator&rows=12&page=1&output=json");
+    const docs = (data.response && data.response.docs) || [];
+    return docs.map(d => ({
+      title: (d.title || "Sin título").toString().split(/[\n;]/)[0].slice(0,80),
+      author: (d.creator || "Autor desconocido").toString().split(/[\n;]/)[0].slice(0,40),
+      src: "Archive.org", load: () => this.loadArchive(d.identifier, (d.title||"Documento").toString())
+    }));
+  },
+  async loadArchive(id, title){
+    toast("📚 Localizando versión legible…");
+    try {
+      const meta = await this.fetchJSON("https://archive.org/metadata/" + encodeURIComponent(id));
+      const files = (meta && meta.files) || [];
+      const txt = files.find(f => f.format === "DjVuTXT" || /_djvu\.txt$/i.test(f.name || ""));
+      const pdf = files.find(f => f.format === "Text PDF") ||
+                  files.find(f => /pdf/i.test(f.format || "") && !/image/i.test(f.format || ""));
+      if (txt){ // preferimos texto plano: rápido y fiable (el PDF remoto pesa y depende del visor)
+        Audiobook.loadTextBook(title, await this.fetchText(`https://archive.org/download/${id}/${encodeURIComponent(txt.name)}`));
+      } else if (pdf){
+        await Audiobook.loadUrl(`https://archive.org/download/${id}/${encodeURIComponent(pdf.name)}`, title);
+      } else toast("❌ Este ítem no tiene versión de texto (parece escaneado). Prueba otro resultado.");
+    } catch(e){ console.error(e); toast("❌ No pudimos abrir este ítem de Archive.org."); }
+  },
+  /* --- Open Library (Internet Archive): API estable, CORS abierto ---
+     Devuelve metadatos con el identificador `ia` del texto en Archive.org. */
+  async searchOpenLib(query){
+    const data = await this.fetchJSON("https://openlibrary.org/search.json?q=" +
+      encodeURIComponent(query) + "&limit=12&fields=title,author_name,ia");
+    return (data.docs || [])
+      .filter(d => d.ia && d.ia.length)
+      .map(d => ({
+        title: d.title, author: (d.author_name || ["Desconocido"])[0],
+        src: "Open Library", load: () => this.loadArchive(d.ia[0], d.title)
+      }));
+  },
+  /* --- Wikisource en español (API MediaWiki oficial, origin=*) ---
+     Enorme colección de dominio público en español. */
+  async searchWikisource(query){
+    const data = await this.fetchJSON("https://es.wikisource.org/w/api.php?action=query&list=search" +
+      "&srnamespace=0&srlimit=12&format=json&origin=*&srsearch=" + encodeURIComponent(query));
+    const hits = (data.query && data.query.search) || [];
+    return hits.map(h => ({
+      title: h.title, author: "Wikisource", src: "Wikisource",
+      load: () => this.loadWikisource(h.title)
+    }));
+  },
+  async loadWikisource(title){
+    toast("📚 Descargando de Wikisource…");
+    try {
+      const data = await this.fetchJSON("https://es.wikisource.org/w/api.php?action=query&prop=extracts" +
+        "&explaintext=1&redirects=1&format=json&origin=*&titles=" + encodeURIComponent(title));
+      const pages = data.query && data.query.pages;
+      const page = pages && Object.values(pages)[0];
+      const text = page && page.extract;
+      if (!text || text.trim().length < 300)
+        return toast("❌ Texto muy corto o dividido en subpáginas. Prueba otra edición u otra fuente.");
+      Audiobook.loadTextBook(title, text);
+    } catch(e){ console.error(e); toast("❌ No pudimos descargar de Wikisource."); }
+  }
+};
+
+/* ############################################################
+   MÓDULO: Idiomas con IA.
+   - AIProvider: interfaz abstracta. DemoAIProvider la implementa
+     localmente; OpenAIProvider/GeminiProvider/ClaudeProvider pueden
+     conectarse vía backend proxy (nunca claves en el frontend).
+   ############################################################ */
+class AIProvider {
+  async chat({lang, level, scenario, mode, history}){ throw new Error("not implemented"); }
+}
+/* DemoAIProvider — respuestas locales deterministas. Honesto: es un
+   simulador pedagógico, no una IA real. Sirve para UX y testing. */
+class DemoAIProvider extends AIProvider {
+  async chat(ctx){
+    await new Promise(r => setTimeout(r, 600 + Math.random()*600)); // latencia simulada
+    const L = DemoAIProvider.LINES[ctx.lang] || DemoAIProvider.LINES.en;
+    const turns = ctx.history.filter(m => m.who === "me").length;
+    if (turns === 0) return {text: L.openers[ctx.scenario] || L.openers.daily, note: null};
+    if (ctx.mode === "teacher" && turns === 1) return {text: L.followups[0], note: this.correct(ctx.history.at(-1).text)};
+    return {text: L.followups[turns % L.followups.length], note: ctx.mode === "teacher" ? this.correct(ctx.history.at(-1).text) : null};
+  }
+  /* Corrección heurística MUY básica (demo). Un proveedor real haría
+     análisis gramatical completo. Señala: mayúscula inicial, puntuación
+     final, dobles espacios, palabras muy repetidas. */
+  correct(text){
+    const issues = [];
+    if (text.length > 2 && text[0] === text[0].toLowerCase() && /[a-záéíóúñ]/.test(text[0]))
+      issues.push("Empieza la frase con mayúscula.");
+    if (text.length > 2 && !/[.!?…]$/.test(text.trim()))
+      issues.push("Termina la oración con punto o signo de cierre.");
+    if (/\s{2,}/.test(text)) issues.push("Evita los espacios dobles.");
+    const words = text.toLowerCase().split(/\s+/);
+    const counts = {}; words.forEach(w => counts[w] = (counts[w]||0)+1);
+    const rep = Object.entries(counts).find(([w,c]) => c >= 4 && w.length > 3);
+    if (rep) issues.push(`Intenta variar: repetiste “${rep[0]}” ${rep[1]} veces.`);
+    return issues.length ? "🎓 Correcciones:\n• " + issues.join("\n• ") : "🎓 ¡Muy bien! No detecté errores básicos.";
+  }
+  static LINES = {
+    es:{ openers:{daily:"¡Hola! Soy tu compañero de práctica. ¿Cómo estuvo tu día?", restaurant:"¡Hola! Bienvenido al restaurante. ¿Qué te gustaría pedir hoy?", airport:"¡Buenas! Estamos en el aeropuerto. ¿A dónde viajas?", interview:"Hola, gracias por venir. Cuéntame un poco sobre ti.", travel:"¡Qué emoción viajar! ¿Qué lugar te gustaría visitar?", shopping:"¡Hola! ¿Buscas algo en especial hoy?"}, followups:["¡Interesante! Cuéntame más sobre eso.","Muy bien. ¿Y qué hiciste después?","Me gusta cómo lo cuentas. ¿Puedes añadir más detalles?"] },
+    en:{ openers:{daily:"Hi! I'm your practice partner. How was your day?", restaurant:"Hello! Welcome to our restaurant. What would you like to order?", airport:"Hi there! We're at the airport. Where are you travelling to?", interview:"Hello, thanks for coming. Tell me a little about yourself.", travel:"How exciting to travel! What place would you like to visit?", shopping:"Hi! Are you looking for anything special today?"}, followups:["Interesting! Tell me more about that.","Very good. And what did you do next?","I like how you tell it. Can you add more details?"] },
+    fr:{ openers:{daily:"Salut ! Je suis ton partenaire de pratique. Comment s'est passée ta journée ?", restaurant:"Bonjour ! Bienvenue au restaurant. Que souhaites-tu commander ?", airport:"Bonjour ! Nous sommes à l'aéroport. Où voyages-tu ?", interview:"Bonjour, merci d'être venu. Parle-moi un peu de toi.", travel:"Quel plaisir de voyager ! Quel endroit voudrais-tu visiter ?", shopping:"Bonjour ! Tu cherches quelque chose en particulier ?"}, followups:["Intéressant ! Dis-m'en plus.","Très bien. Et qu'as-tu fait ensuite ?","J'aime ta façon de raconter. Peux-tu ajouter des détails ?"] },
+    pt:{ openers:{daily:"Olá! Sou seu parceiro de prática. Como foi o seu dia?", restaurant:"Olá! Bem-vindo ao restaurante. O que gostaria de pedir?", airport:"Olá! Estamos no aeroporto. Para onde você vai viajar?", interview:"Olá, obrigado por vir. Conte-me um pouco sobre você.", travel:"Que legal viajar! Qual lugar você gostaria de visitar?", shopping:"Olá! Está procurando algo especial hoje?"}, followups:["Interessante! Conte-me mais sobre isso.","Muito bem. E o que você fez depois?","Gosto do seu jeito de contar. Pode dar mais detalhes?"] },
+    it:{ openers:{daily:"Ciao! Sono il tuo compagno di pratica. Com'è stata la tua giornata?", restaurant:"Ciao! Benvenuto al ristorante. Cosa vorresti ordinare?", airport:"Ciao! Siamo in aeroporto. Dove stai viaggiando?", interview:"Ciao, grazie per essere venuto. Parlami un po' di te.", travel:"Che bello viaggiare! Quale posto vorresti visitare?", shopping:"Ciao! Cerchi qualcosa di speciale oggi?"}, followups:["Interessante! Dimmi di più.","Molto bene. E cosa hai fatto dopo?","Mi piace come lo racconti. Puoi aggiungere dettagli?"] },
+    de:{ openers:{daily:"Hallo! Ich bin dein Übungspartner. Wie war dein Tag?", restaurant:"Hallo! Willkommen im Restaurant. Was möchtest du bestellen?", airport:"Hallo! Wir sind am Flughafen. Wohin reist du?", interview:"Hallo, danke fürs Kommen. Erzähl mir ein bisschen über dich.", travel:"Wie schön zu reisen! Welchen Ort möchtest du besuchen?", shopping:"Hallo! Suchst du heute etwas Bestimmtes?"}, followups:["Interessant! Erzähl mir mehr darüber.","Sehr gut. Und was hast du danach gemacht?","Ich mag, wie du es erzählst. Kannst du mehr Details geben?"] }
+  };
+}
+/* Proveedores reales (esqueleto). Requieren backend proxy:
+   el frontend envía la conversación a /api/chat y el servidor
+   añade la clave del proveedor. NUNCA almacenar claves aquí. */
+class RemoteAIProvider extends AIProvider {
+  constructor(endpoint){ super(); this.endpoint = endpoint; }
+  async chat(ctx){
+    const res = await fetch(this.endpoint, {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(ctx)});
+    if (!res.ok) throw new Error("AI request failed: " + res.status);
+    return res.json(); // {text, note}
+  }
+}
+/* Selector de proveedor: por defecto demo. Para producción:
+   AI.setProvider(new RemoteAIProvider("/api/chat")); */
+const AI = { provider: new DemoAIProvider(), setProvider(p){ this.provider = p; } };
+
+const Langs = {
+  history: [],
+  init(){
+    this.chat = document.getElementById("ln-chat");
+    this.input = document.getElementById("ln-input");
+    document.getElementById("ln-send").onclick = () => this.send();
+    this.input.onkeydown = e => { if (e.key === "Enter") this.send(); };
+    document.getElementById("ln-reset").onclick = () => this.reset();
+    ["ln-lang","ln-level","ln-scenario","ln-mode"].forEach(id => document.getElementById(id).onchange = () => this.reset(true));
+    document.getElementById("ln-mic").onclick = () => this.mic();
+    this.reset(true);
+  },
+  reset(auto){
+    this.history = []; this.chat.innerHTML = "";
+    TTS.stop();
+    if (auto) this.reply(); else toast("↺ Nueva conversación");
+  },
+  bubble(who, text, note){
+    const d = document.createElement("div");
+    d.className = "msg " + who;
+    d.textContent = text;
+    if (note){
+      const n = document.createElement("span"); n.className = "mini"; n.textContent = note; d.appendChild(n);
+    }
+    if (who === "ai"){
+      const b = document.createElement("button");
+      b.className = "mini"; b.textContent = "🔊 Escuchar"; b.style.cssText = "display:inline-block;margin-top:8px;background:none;border:none;color:var(--accent2);cursor:pointer;font-size:.78rem;text-decoration:underline";
+      b.onclick = () => TTS.speak(text);
+      d.appendChild(b);
+    }
+    this.chat.appendChild(d);
+    this.chat.scrollTop = this.chat.scrollHeight;
+  },
+  async send(){
+    const text = this.input.value.trim();
+    if (!text) return;
+    this.input.value = "";
+    this.bubble("me", text);
+    this.history.push({who:"me", text});
+    await this.reply();
+  },
+  async reply(){
+    const ctx = {
+      lang: document.getElementById("ln-lang").value,
+      level: document.getElementById("ln-level").value,
+      scenario: document.getElementById("ln-scenario").value,
+      mode: document.getElementById("ln-mode").value,
+      history: this.history
+    };
+    this.bubble("ai", "…"); // estado de carga
+    const pending = this.chat.lastChild;
+    try {
+      const r = await AI.provider.chat(ctx);
+      pending.remove();
+      this.bubble("ai", r.text, r.note);
+      this.history.push({who:"ai", text:r.text});
+    } catch(e){
+      console.error(e);
+      pending.remove();
+      this.bubble("ai", "😕 No pude responder ahora. Revisa la conexión o inténtalo de nuevo.");
+    }
+  },
+  mic(){
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return toast("❌ Tu navegador no soporta reconocimiento de voz.");
+    const rec = new SR();
+    rec.lang = {es:"es-ES",en:"en-US",fr:"fr-FR",pt:"pt-BR",it:"it-IT",de:"de-DE"}[document.getElementById("ln-lang").value];
+    toast("🎙️ Escuchando… habla ahora");
+    rec.onresult = e => { this.input.value = e.results[0][0].transcript; this.send(); };
+    rec.onerror = () => toast("❌ No se pudo usar el micrófono. Verifica los permisos.");
+    try { rec.start(); } catch(e){ toast("❌ El micrófono no está disponible."); }
+  }
+};
+
+/* ############################################################
+   MÓDULO: Ambiente — "mesa de mezclas" de sonidos generados con
+   Web Audio API (ruido filtrado + LFOs + chirps programados).
+   Sin archivos externos: funciona offline. Cada canal = un nodo
+   de ganancia con su propio slider.
+   ############################################################ */
+const Ambience = {
+  ctx:null, master:null, comp:null, channels:{}, _noise:null, _brown:null, _pink:null,
+  NAMES:{rain:"🌧 Lluvia",thunder:"⛈ Trueno",wind:"💨 Viento",forest:"🌲 Bosque",ocean:"🌊 Océano",fire:"🔥 Fuego",cafe:"☕ Cafetería",night:"🌙 Noche",birds:"🐦 Pájaros"},
+  ensure(){
+    if (!this.ctx){
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) throw new Error("WebAudio no soportado");
+      this.ctx = new AC();
+      // Compresor master: pega las capas y evita la aspereza por saturación
+      // (principal causa de que el ruido suene a "estática digital")
+      this.comp = this.ctx.createDynamicsCompressor();
+      this.comp.threshold.value = -20; this.comp.knee.value = 18;
+      this.comp.ratio.value = 4; this.comp.attack.value = .01; this.comp.release.value = .35;
+      this.master = this.ctx.createGain(); this.master.gain.value = .9;
+      this.master.connect(this.comp); this.comp.connect(this.ctx.destination);
+    }
+    if (this.ctx.state === "suspended") this.ctx.resume();
+  },
+  rnd:(a,b)=>a+Math.random()*(b-a),
+  /* Ruido blanco: base para transitorios (gotas, chispas) */
+  noise(){
+    if (this._noise) return this._noise;
+    const b = this.ctx.createBuffer(1, this.ctx.sampleRate*2, this.ctx.sampleRate);
+    const d = b.getChannelData(0);
+    for (let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+    return this._noise = b;
+  },
+  /* Ruido rosa (Paul Kellet, 1/f): espectro como el de la naturaleza.
+     EL cambio clave: elimina el "soplo metálico" del ruido blanco. */
+  pinkBuf(){
+    if (this._pink) return this._pink;
+    const len = this.ctx.sampleRate*4, b = this.ctx.createBuffer(1, len, this.ctx.sampleRate), d = b.getChannelData(0);
+    let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+    for (let i=0;i<len;i++){
+      const w = Math.random()*2-1;
+      b0 = .99886*b0 + w*.0555179; b1 = .99332*b1 + w*.0750759;
+      b2 = .96900*b2 + w*.1538520; b3 = .86650*b3 + w*.3104856;
+      b4 = .55000*b4 + w*.5329522; b5 = -.7616*b5 - w*.0168980;
+      d[i] = (b0+b1+b2+b3+b4+b5+b6 + w*.5362) * .11;
+      b6 = w * .115926;
+    }
+    return this._pink = b;
+  },
+  src(buf, rate=1){ // fuente de ruido con reproducción ligeramente desafinada:
+    const s = this.ctx.createBufferSource(); // dos capas desafinadas eliminan la sensación de loop
+    s.buffer = buf; s.loop = true; s.playbackRate.value = rate;
+    return s;
+  },
+  layer(out, buf, rate, type, freq, q, g){ // capa estacional: fuente → filtro → ganancia → out
+    const c = this.ctx, s = this.src(buf, rate);
+    const f = c.createBiquadFilter(), gn = c.createGain();
+    f.type = type; f.frequency.value = freq; if (q) f.Q.value = q; gn.gain.value = g;
+    s.connect(f); f.connect(gn); gn.connect(out); s.start();
+    return gn;
+  },
+  /* Caminata aleatoria: en vez de un LFO perfecto (que suena artificial),
+     el parámetro vaga hacia objetivos aleatorios — como respira el viento. */
+  walk(param, min, max, everyMs, tau=1.4){
+    return this.every(() => param.setTargetAtTime(this.rnd(min,max), this.ctx.currentTime, tau), everyMs, everyMs*2.2);
+  },
+  every(fn, minMs, maxMs){ // planificador de eventos aleatorios; devuelve cancelador
+    let alive = true, t;
+    const go = () => { if (!alive) return; fn(); t = setTimeout(go, minMs + Math.random()*(maxMs-minMs)); };
+    t = setTimeout(go, minMs + Math.random()*(maxMs-minMs));
+    return () => { alive = false; clearTimeout(t); };
+  },
+  /* Microtransitorio con paneo: gota, chispa, hoja. Muchos de estos,
+     densos y silenciosos, crean la textura real de lluvia/fuego. */
+  pop(out, type, freq, dur, g, pan=0){
+    const c = this.ctx, s = c.createBufferSource();
+    s.buffer = this.noise();
+    const f = c.createBiquadFilter(), gn = c.createGain(), t = c.currentTime;
+    f.type = type; f.frequency.value = freq; f.Q.value = type === "bandpass" ? 6 : .7;
+    gn.gain.setValueAtTime(.0001, t);
+    gn.gain.exponentialRampToValueAtTime(g, t + Math.min(.012, dur*.3));
+    gn.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    try { // paneo estéreo por evento: el espacio "abre" el sonido
+      const p = c.createStereoPanner(); p.pan.value = pan;
+      s.connect(f); f.connect(gn); gn.connect(p); p.connect(out);
+    } catch(e){ s.connect(f); f.connect(gn); gn.connect(out); }
+    s.start(t); s.stop(t + dur + .05);
+  },
+  chirp(out, f0, f1, dur, g, pan=0){ // canto de ave / grillo
+    const c = this.ctx, o = c.createOscillator(), gn = c.createGain(), t = c.currentTime;
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.exponentialRampToValueAtTime(f1, t+dur);
+    gn.gain.setValueAtTime(.0001, t);
+    gn.gain.exponentialRampToValueAtTime(g, t+.015);
+    gn.gain.exponentialRampToValueAtTime(.0001, t+dur);
+    try { const p = c.createStereoPanner(); p.pan.value = pan; o.connect(gn); gn.connect(p); p.connect(out); }
+    catch(e){ o.connect(gn); gn.connect(out); }
+    o.start(t); o.stop(t+dur+.02);
+  },
+  attach(out){ // out → master con paneo lento global (sensación de espacio abierto)
+    const nodes = [];
+    try {
+      const p = this.ctx.createStereoPanner();
+      out.connect(p); p.connect(this.master);
+      const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+      o.frequency.value = this.rnd(.03,.07); g.gain.value = .45;
+      o.connect(g); g.connect(p.pan); o.start();
+      nodes.push(o);
+    } catch(e){ out.connect(this.master); }
+    return nodes;
+  },
+  /* Motor de ambientes: capas estacionales de ruido rosa desafinado
+     + caminatas aleatorias + microtransitorios paneados. Nada es un
+     loop fijo: todo respira, se mueve y ocupa el espacio estéreo. */
+  start(name){
+    this.ensure();
+    if (this.channels[name]) return;
+    const c = this.ctx, P = this.pinkBuf(), out = c.createGain();
+    out.gain.value = 0;
+    let cancel = [], oscs = [];
+    const rnd = this.rnd, pk = (rate,type,f,q,g) => this.layer(out, P, rate, type, f, q, g);
+
+    if (name === "rain"){
+      // lecho grave (nubes/distancia) + faldón medio + velo agudo, con caminatas propias
+      const low  = pk(.93, "lowpass",  320, 0,   .38);
+      const mid  = pk(1.00, "bandpass", 1800, .6, .30);
+      const high = pk(1.07, "highpass", 6000, 0,  .10);
+      cancel.push(this.walk(low.gain,  .26, .42, 2800));
+      cancel.push(this.walk(mid.gain,  .20, .34, 1900));
+      cancel.push(this.walk(high.gain, .06, .13, 1100));
+      // ~25 gotas/seg silenciosas y paneadas: la "textura" de la lluvia real
+      cancel.push(this.every(() => this.pop(out, "bandpass", rnd(1400,6800), rnd(.03,.09), rnd(.012,.04), rnd(-1,1)), 25, 55));
+      // alguna que otra gota gruesa distinta (tropiezo audible)
+      cancel.push(this.every(() => this.pop(out, "bandpass", rnd(700,1300), rnd(.12,.2), rnd(.03,.06), rnd(-.8,.8)), 900, 2600));
+    }
+    else if (name === "wind"){
+      pk(.90, "lowpass", 130, 0, .32); // cuerpo grave
+      const s = this.src(P, 1.08);
+      const f = c.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 380; f.Q.value = 1.1;
+      const gn = c.createGain(); gn.gain.value = .2;
+      s.connect(f); f.connect(gn); gn.connect(out); s.start();
+      // ráfagas: el filtro y la intensidad vagan sin patrón
+      cancel.push(this.walk(f.frequency, 220, 680, 2600, 1.6));
+      cancel.push(this.walk(gn.gain, .06, .34, 2100, 1.1));
+      cancel.push(this.walk(f.Q, .8, 2.4, 3400, 1.8));
+    }
+    else if (name === "ocean"){
+      const deep = pk(.92, "lowpass", 400, 0, .30);
+      const wash = pk(1.05, "bandpass", 850, .5, .16);
+      // cada ola: sube, rompe y se retira (ganancia y brillo juntos)
+      cancel.push(this.every(() => {
+        const t = c.currentTime, up = rnd(3, 6.5);
+        deep.gain.setTargetAtTime(rnd(.4,.55), t, 1.3);
+        deep.gain.setTargetAtTime(.22, t+up, 2.2);
+        wash.gain.setTargetAtTime(rnd(.3,.42), t, .9);
+        wash.gain.setTargetAtTime(.12, t+up, 1.6);
+      }, 3800, 7200));
+    }
+    else if (name === "thunder"){
+      pk(.95, "lowpass", 120, 0, .18);
+      cancel.push(this.every(() => {
+        const o = c.createOscillator(), g = c.createGain(), f = c.createBiquadFilter(), t = c.currentTime;
+        const dur = rnd(1.8, 3.6);
+        o.type = "sawtooth";
+        o.frequency.setValueAtTime(rnd(42,58), t);
+        o.frequency.exponentialRampToValueAtTime(26, t+dur);
+        f.type = "lowpass"; f.frequency.value = 110;
+        g.gain.setValueAtTime(.0001, t);
+        g.gain.exponentialRampToValueAtTime(.8, t+.1);
+        g.gain.exponentialRampToValueAtTime(.0001, t+dur);
+        o.connect(f); f.connect(g); g.connect(out); o.start(t); o.stop(t+dur);
+        this.pop(out, "lowpass", 140, rnd(.3,.7), .3); // rodada de nubes
+        this.pop(out, "highpass", 900, .08, .16);      // trallazo
+      }, 7000, 20000));
+    }
+    else if (name === "fire"){
+      pk(1.0, "lowpass", 260, 0, .26); // lecho
+      const hiss = pk(1.06, "bandpass", 2600, .8, .06);
+      cancel.push(this.walk(hiss.gain, .03, .09, 700, .4));
+      // crepitar denso: chispas cortas y paneadas, + chasquidos de leña graves ocasionales
+      cancel.push(this.every(() => this.pop(out, "bandpass", rnd(1600,5600), rnd(.012,.05), rnd(.05,.16), rnd(-1,1)), 70, 320));
+      cancel.push(this.every(() => this.pop(out, "lowpass", 240, rnd(.12,.3), rnd(.08,.18), rnd(-.5,.5)), 1800, 5500));
+    }
+    else if (name === "cafe"){
+      const mur = pk(1.0, "bandpass", 420, .7, .30);
+      const mur2 = pk(.88, "bandpass", 620, .9, .12); // segunda "conversación"
+      cancel.push(this.walk(mur.gain,  .18, .34, 2400));
+      cancel.push(this.walk(mur2.gain, .05, .16, 1600));
+      cancel.push(this.walk(mur.frequency, 340, 520, 3000));
+      cancel.push(this.every(() => this.pop(out, "bandpass", rnd(2400,4200), .25, .03, rnd(-1,1)), 2500, 8000)); // tazas/cubiertos
+    }
+    else if (name === "night"){
+      pk(.95, "lowpass", 170, 0, .22);
+      cancel.push(this.every(() => { // grillos en grupos rítmicos paneados
+        const n = 3 + Math.floor(Math.random()*4), base = rnd(3900,4600), pan = rnd(-.9,.9);
+        for (let i=0; i<n; i++) setTimeout(() => this.chirp(out, base, base*1.22, .07, .13, pan), i*130);
+      }, 900, 2600));
+      cancel.push(this.every(() => this.chirp(out, rnd(800,1200), rnd(600,900), .5, .02, rnd(-1,1)), 6000, 16000)); // búho lejano
+    }
+    else if (name === "birds"){
+      cancel.push(this.every(() => {
+        const style = Math.random(), pan = rnd(-.9,.9);
+        if (style < .5) this.chirp(out, rnd(2000,3400), rnd(2600,4300), .09, .17, pan);
+        else if (style < .8){
+          const f = rnd(2200,3200);
+          for (let i=0; i<4+Math.floor(Math.random()*3); i++)
+            setTimeout(() => this.chirp(out, f, f*.72, .05, .15, pan), i*90);
+        }
+        else {
+          this.chirp(out, rnd(1600,2200), rnd(2400,3000), .12, .13, pan);
+          setTimeout(() => this.chirp(out, rnd(2400,3000), rnd(1800,2400), .14, .13, -pan), 260);
+        }
+      }, 700, 2600));
+    }
+    else if (name === "forest"){
+      const rustle = pk(1.0, "bandpass", 700, .5, .2);
+      cancel.push(this.walk(rustle.gain, .08, .24, 2000));
+      cancel.push(this.walk(rustle.frequency, 500, 950, 3200, 1.9));
+      cancel.push(this.every(() => this.pop(out, "bandpass", rnd(900,1800), rnd(.3,.8), .05, rnd(-1,1)), 3000, 8000)); // hojas
+      cancel.push(this.every(() => this.chirp(out, rnd(2400,3800), rnd(2800,4400), .08, .13, rnd(-.8,.8)), 1500, 5000));
+    }
+    oscs.push(...this.attach(out));
+    this.channels[name] = { out, cancel, oscs };
+    this.level(name, .5);
+  },
+  level(name, v){ // v 0..1 → ganancia perceptual (curva cuadrática)
+    const ch = this.channels[name]; if (!ch) return;
+    ch.out.gain.setTargetAtTime(v*v*.9, this.ctx.currentTime, .1);
+  },
+  stop(name){
+    const ch = this.channels[name]; if (!ch) return;
+    (ch.cancel || []).forEach(fn => fn());
+    (ch.oscs || []).forEach(o => { try{ o.stop(); }catch(e){} });
+    ch.out.gain.setTargetAtTime(0, this.ctx.currentTime, .08);
+    setTimeout(() => { try{ ch.out.disconnect(); }catch(e){} }, 400);
+    delete this.channels[name];
+  },
+  stopAll(){ Object.keys(this.channels).forEach(n => this.stop(n)); this.uiSync(); },
+  uiSync(){ // refleja el estado real en los sliders (usado por presets y stopAll)
+    document.querySelectorAll("#amb-mixer input[type=range]").forEach(r => {
+      const on = this.channels[r.dataset.ch];
+      r.value = on ? Math.round(Math.sqrt(on.out.gain.value/.9)*100) : 0;
+    });
+  }
+};
+
+const AMB_CHANNELS = ["rain","thunder","wind","forest","ocean","fire","cafe","night","birds"];
+const AMB_PRESETS = [
+  {name:"🌧 Lluvia suave", mix:{rain:.5}},
+  {name:"⛈ Tormenta", mix:{rain:.6, thunder:.5, wind:.4}},
+  {name:"🌲 Bosque", mix:{forest:.5, birds:.4, wind:.25}},
+  {name:"🌊 Océano", mix:{ocean:.6, wind:.2}},
+  {name:"☕ Cafetería", mix:{cafe:.55, rain:.15}},
+  {name:"🌙 Noche", mix:{night:.5, crickets:null, wind:.2}}
+];
+(function buildAmbient(){
+  const mixer = document.getElementById("amb-mixer");
+  AMB_CHANNELS.forEach(name => {
+    const d = document.createElement("div");
+    d.className = "channel card";
+    d.style.boxShadow = "none";
+    d.innerHTML = `<span class="cico">${Ambience.NAMES[name].split(" ")[0]}</span>
+      <span class="cname">${Ambience.NAMES[name].split(" ").slice(1).join(" ")}</span>
+      <input type="range" min="0" max="100" value="0" data-ch="${name}" aria-label="Volumen de ${Ambience.NAMES[name]}">`;
+    const r = d.querySelector("input");
+    r.oninput = () => {
+      const v = +r.value;
+      if (v === 0) Ambience.stop(name); else { Ambience.start(name); Ambience.level(name, v/100); }
+    };
+    mixer.appendChild(d);
+  });
+  const presets = document.getElementById("amb-presets");
+  AMB_PRESETS.forEach(p => {
+    const b = document.createElement("button");
+    b.className = "chip"; b.textContent = p.name;
+    b.onclick = () => {
+      Ambience.stopAll();
+      Object.entries(p.mix).forEach(([ch,v]) => {
+        if (v == null) return;
+        const real = ch === "crickets" ? "night" : ch; // alias: grillos usan el canal noche
+        Ambience.start(real); Ambience.level(real, v);
+      });
+      Ambience.uiSync();
+      toast("🎧 Ambiente: " + p.name);
+    };
+    presets.appendChild(b);
+  });
+  document.getElementById("amb-stop").onclick = () => { Ambience.stopAll(); toast("⏹ Ambiente detenido"); };
+})();
+
+/* ############################################################
+   MÓDULO: Música — playlist local + reproductor global persistente
+   (visible al cambiar de sección). YouTube: solo embed oficial.
+   ############################################################ */
+const Music = {
+  tracks:[], idx:0, loop:false, audio: document.getElementById("pl-audio"),
+  init(){
+    this.player = document.getElementById("player");
+    this.info = document.getElementById("pl-info");
+    this.list = document.getElementById("mu-list");
+    document.getElementById("mu-files").onchange = e => this.addFiles([...e.target.files]);
+    document.getElementById("pl-play").onclick = () => this.toggle();
+    document.getElementById("pl-next").onclick = () => this.next(1);
+    document.getElementById("pl-prev").onclick = () => this.next(-1);
+    document.getElementById("pl-loop").onclick = e => { this.loop = !this.loop; e.currentTarget.style.borderColor = this.loop ? "var(--accent)" : ""; toast(this.loop ? "🔁 Repetir activado" : "Repetir desactivado"); };
+    document.getElementById("pl-vol").oninput = e => this.audio.volume = e.target.value/100;
+    const seek = document.getElementById("pl-seek");
+    seek.oninput = () => { if (this.audio.duration) this.audio.currentTime = seek.value/1000*this.audio.duration; };
+    this.audio.volume = .8;
+    this.audio.addEventListener("timeupdate", () => {
+      if (this.audio.duration) seek.value = Math.round(this.audio.currentTime/this.audio.duration*1000);
+      document.getElementById("pl-time").textContent = this.fmt(this.audio.currentTime) + "/" + this.fmt(this.audio.duration||0);
+    });
+    this.audio.addEventListener("ended", () => { if (this.loop) this.play(this.idx); else this.next(1); });
+    // YouTube embed oficial
+    document.getElementById("yt-go").onclick = () => this.youtube();
+  },
+  fmt(s){ s = Math.floor(s||0); return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); },
+  addFiles(files){
+    const ok = files.filter(f => f.type.startsWith("audio/"));
+    if (!ok.length) return toast("❌ Añade archivos de audio (mp3, ogg, m4a…)");
+    ok.forEach(f => this.tracks.push({name:f.name.replace(/\.[^.]+$/,""), url:URL.createObjectURL(f)}));
+    this.renderList();
+    this.player.classList.remove("hidden");
+    if (this.tracks.length === ok.length) this.play(0);
+    toast(`🎵 ${ok.length} pista(s) añadida(s)`);
+  },
+  renderList(){
+    this.list.innerHTML = "";
+    this.tracks.forEach((t,i) => {
+      const li = document.createElement("li");
+      li.className = i === this.idx ? "on" : "";
+      li.innerHTML = `<span>🎵</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.name}</span>`;
+      li.onclick = () => this.play(i);
+      this.list.appendChild(li);
+    });
+  },
+  play(i){
+    if (!this.tracks.length) return;
+    this.idx = (i+this.tracks.length)%this.tracks.length;
+    this.audio.src = this.tracks[this.idx].url;
+    this.audio.play().catch(()=>toast("❌ No se pudo reproducir este formato de audio."));
+    this.info.textContent = this.tracks[this.idx].name;
+    document.getElementById("pl-play").textContent = "⏸";
+    this.renderList();
+  },
+  toggle(){ if (!this.audio.src) return; if (this.audio.paused){ this.audio.play(); document.getElementById("pl-play").textContent = "⏸"; } else { this.audio.pause(); document.getElementById("pl-play").textContent = "▶"; } },
+  next(d){ if (!this.tracks.length) return; this.play(this.idx + d); },
+  youtube(){
+    const v = document.getElementById("yt-url").value.trim();
+    const m = v.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/);
+    const box = document.getElementById("yt-box");
+    if (!m) return toast("❌ Introduce un enlace válido de YouTube.");
+    box.innerHTML = `<iframe class="yt-frame" src="https://www.youtube-nocookie.com/embed/${m[1]}" title="YouTube" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+    toast("📺 Reproduciendo con el reproductor oficial de YouTube");
+  }
+};
+
+
+/* ############################################################
+   MÓDULO: Dragoncita luminosa — mascota viva de Refugio.
+   - Vuela libre por TODA la página (posición fija, z-index alto,
+     pointer-events solo sobre ella: nunca bloquea la interfaz).
+   - IA de deambulación: objetivos aleatorios con "llegada suave"
+     (frena al acercarse), pausas, miradas y cambios de rumbo.
+   - Interacción: clic/tap = caricia → corazones, brinco, gorjeo
+     sintetizado (WebAudio) y burbuja de diálogo. Contador de
+     caricias persistido en localStorage.
+   - En el Inicio dice "Este es tu espacio, dragoncita preciosa".
+   - Respeta prefers-reduced-motion y pausa con la pestaña oculta.
+   ############################################################ */
+const Dragon = {
+  el:null, bubble:null, x:0, y:0, tx:0, ty:0, last:0, raf:null,
+  flip:1, restUntil:0, hopT:0, pets:0, lastBubble:0, lastHome:0, ready:false,
+  HOME: "Este es tu espacio, dragoncita preciosa 💜✨",
+  PHRASES: ["¡Hola! ✨","¿Me acaricias? ♥","Esta página brilla contigo 💫","¡Qué luz tan bonita!",
+    "*ruido de dragoncita feliz*","Vuelo contigo siempre 🐉","Tu espacio es mi cielo","¡Adoro tus visitas! 💜"],
+  init(){
+    this.el = document.getElementById("dragon");
+    this.bubble = document.getElementById("dbubble");
+    if (!this.el) return;
+    this.ready = true;
+    this.pets = Store.data.pets || 0;
+    this.x = innerWidth * .5; this.y = innerHeight * .3;
+    this.newTarget(true);
+    this.render();
+    this.updateCounter();
+    // caricia: reacción completa y vuela a otro lugar
+    this.el.addEventListener("pointerdown", e => { e.preventDefault(); this.pet(); });
+    this.el.addEventListener("pointerenter", () => { this.el.style.filter = "drop-shadow(0 8px 20px rgba(94,234,212,.65)) brightness(1.08)"; });
+    this.el.addEventListener("pointerleave", () => { this.el.style.filter = ""; });
+    document.addEventListener("visibilitychange", () => document.hidden ? this.stop() : this.start());
+    addEventListener("resize", () => { // no salirse de pantalla tras un resize
+      this.x = Math.min(this.x, innerWidth - 80); this.y = Math.min(this.y, innerHeight - 90);
+    });
+    this.start();
+  },
+  start(){ if (this.raf || !this.ready) return; this.last = performance.now();
+    const loop = t => { this.step(t); this.raf = requestAnimationFrame(loop); };
+    this.raf = requestAnimationFrame(loop); },
+  stop(){ cancelAnimationFrame(this.raf); this.raf = null; },
+  newTarget(first){
+    const m = 70; // margen de seguridad
+    this.tx = m + Math.random() * Math.max(80, innerWidth - 2*m - 80);
+    this.ty = 70 + Math.random() * Math.max(80, innerHeight - 2*m - 160);
+    if (first) { this.x = this.tx; this.y = this.ty; }
+    this.restUntil = 0;
+  },
+  step(t){
+    const dt = Math.min(.05, (t - this.last) / 1000); this.last = t;
+    const now = performance.now();
+    if (now < this.restUntil) { this.render(); return; } // descansando: solo flota (bob CSS)
+    const dx = this.tx - this.x, dy = this.ty - this.y, dist = Math.hypot(dx, dy);
+    if (dist < 8){ // llegó: descansa un rato y elige nuevo rumbo
+      this.restUntil = now + this.rnd(1400, 3600);
+      if (Math.random() < .25) this.sayRandom(); // a veces comenta algo volando
+      this.newTargetSoon();
+      return;
+    }
+    const reduced = Store.data.reduced;
+    const maxV = reduced ? 34 : (72 + Math.random() * 26);
+    const v = maxV * Math.min(1, dist / 130); // llegada suave: frena al acercarse
+    this.x += dx / dist * v * dt;
+    this.y += dy / dist * v * dt;
+    if (Math.abs(dx) > 6) this.flip = dx < 0 ? -1 : 1;
+    if (this.hopT > 0) this.hopT = Math.max(0, this.hopT - dt);
+    this.render();
+  },
+  newTargetSoon(){ clearTimeout(this._nt); this._nt = setTimeout(() => this.newTarget(), 60); },
+  hop(){ this.hopT = .55; },
+  render(){
+    const hop = this.hopT > 0 ? -Math.sin(Math.PI * (1 - this.hopT / .55)) * 30 : 0;
+    this.el.style.transform = `translate(${this.x}px, ${this.y + hop}px) scaleX(${this.flip})`;
+  },
+  rnd:(a,b)=>a+Math.random()*(b-a),
+  /* ---- interacción ---- */
+  pet(){
+    const now = performance.now();
+    if (now - (this._lastPet || 0) < 280) return; // anti doble-tap
+    this._lastPet = now;
+    this.pets++; Store.data.pets = this.pets; Store.save();
+    this.updateCounter();
+    this.hop();                                   // brinco de felicidad
+    this.chirp();                                 // gorjeo sintetizado
+    this.hearts();                                // corazones flotando
+    this.say(this.PHRASES[Math.floor(Math.random()*this.PHRASES.length)], 2800);
+    this.newTarget();                             // vuela a celebrar a otro lugar
+  },
+  hearts(){
+    const icons = ["💜","💙","✨","♥","💖"];
+    for (let i=0;i<4;i++){
+      const h = document.createElement("span");
+      h.className = "d-heart";
+      h.textContent = icons[Math.floor(Math.random()*icons.length)];
+      h.style.left = (this.x + 22 + this.rnd(-8, 26)) + "px";
+      h.style.top  = (this.y + 8 + this.rnd(-4, 14)) + "px";
+      h.style.setProperty("--hx", this.rnd(-34, 34) + "px");
+      document.body.appendChild(h);
+      setTimeout(() => h.remove(), 1300);
+    }
+  },
+  chirp(){ // gorjeo suave de dragoncita: 3 notas ascendentes sintetizadas
+    try {
+      this.ac ||= new (window.AudioContext || window.webkitAudioContext)();
+      if (this.ac.state === "suspended") this.ac.resume();
+      const c = this.ac, t0 = c.currentTime + .01;
+      [0, .11, .23].forEach((d, i) => {
+        const o = c.createOscillator(), g = c.createGain();
+        o.type = "sine";
+        const f = 840 + i * 240;
+        o.frequency.setValueAtTime(f, t0 + d);
+        o.frequency.exponentialRampToValueAtTime(f * 1.5, t0 + d + .07);
+        g.gain.setValueAtTime(.0001, t0 + d);
+        g.gain.exponentialRampToValueAtTime(.11, t0 + d + .02);
+        g.gain.exponentialRampToValueAtTime(.0001, t0 + d + .13);
+        o.connect(g); g.connect(c.destination); o.start(t0 + d); o.stop(t0 + d + .16);
+      });
+    } catch(e){ /* sin audio: la dragoncita sigue feliz en silencio */ }
+  },
+  say(text, ms=3200){
+    if (!this.bubble) return;
+    const now = performance.now();
+    if (text !== this.HOME && now - this.lastBubble < 6000) return; // no spamear
+    this.lastBubble = now;
+    this.bubble.textContent = text;
+    // posicionar junto a la dragoncita sin salirse de pantalla
+    this.bubble.classList.add("show");
+    const bw = this.bubble.offsetWidth || 180, bh = this.bubble.offsetHeight || 48;
+    this.bubble.style.left = Math.min(Math.max(8, this.x - 10), innerWidth - bw - 8) + "px";
+    this.bubble.style.top  = Math.max(8, this.y - bh - 16) + "px";
+    clearTimeout(this._bt);
+    this._bt = setTimeout(() => this.bubble.classList.remove("show"), ms);
+  },
+  sayRandom(){ this.say(this.PHRASES[Math.floor(Math.random()*this.PHRASES.length)], 2600); },
+  onView(view){ // en el Inicio da la bienvenida (máx. cada 90 s)
+    if (view !== "dashboard" || !this.ready) return;
+    const now = Date.now();
+    if (now - this.lastHome < 90000) return;
+    this.lastHome = now;
+    setTimeout(() => this.say(this.HOME, 5200), 1500);
+  },
+  updateCounter(){
+    const el = document.getElementById("petLine");
+    if (!el) return;
+    el.textContent = this.pets > 0
+      ? `🐉💜 Acariciaste a tu dragoncita luminosa ${this.pets} ${this.pets === 1 ? "vez" : "veces"} — ella te adora.`
+      : "🐉✨ Tu dragoncita luminosa vuela por aquí… acaríciala cuando pase.";
+  }
+};
+
+/* ############################################################
+   ARRANQUE
+   ############################################################ */
+document.addEventListener("DOMContentLoaded", () => {
+  Store.load();
+  Particles.init();   // antes que applyTheme(), que invoca Particles.build()
+  applyTheme();
+  // Inicialización aislada: un módulo con error jamás bloquea a los demás
+  for (const [name, m] of Object.entries({Puzzle, Phrases, Audiobook, Catalog, Langs, Music, Dragon})) {
+    try { m.init(); }
+    catch(e){ console.error("Fallo al iniciar el módulo " + name, e); toast("❌ El módulo " + name + " no pudo iniciar"); }
+  }
+  try { onboarding(); } catch(e){ console.error("Onboarding falló", e); document.querySelector(".modal-veil")?.remove(); }
+  go(Store.data.lastView || "dashboard");
+  // aviso de offline amigable (sin errores técnicos crudos)
+  addEventListener("offline", () => toast("📡 Sin conexión. Las funciones locales siguen disponibles."));
+});
+</script>
+</body>
+</html>
